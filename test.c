@@ -5,26 +5,32 @@
 #include <sched.h>
 #include <unistd.h>
 
+void fakeSleep() {
+    for (int j = 0; j < 99999999; j++)
+    {
+        int i = j + 1;
+        i = i - 1;
+        i = i * 2;
+        i = i / 2;
+        i = i + 1;
+        i = i - 1;
+        i = i * 2;
+        i = i % 2;
+        int result = j * j;
+    }
+}
+
 void *func(void *arg)
 {
     int thread_id = *((int *)arg);
 
     printf("Thread %d started\n", thread_id);
+    fakeSleep();
+
     for (int i = 0; i < 5; i++)
     {
         printf("Thread %d is running %d\n", thread_id, i + 1);
-        for (int j = 0; j < 99999999; j++)
-        {
-            int i = j + 1;
-            i = i - 1;
-            i = i * 2;
-            i = i / 2;
-            i = i + 1;
-            i = i - 1;
-            i = i * 2;
-            i = i % 2;
-            int result = j * j;
-        }
+        fakeSleep();
     }
     printf("Thread %d finished\n", thread_id);
 
