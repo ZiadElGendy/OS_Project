@@ -11,6 +11,7 @@ void thread_short_function(void *arg)
     {
         if (i % 2 == 0)
             printf("Thread %d is running\n", thread_id);
+            sleep(1);
     }
     printf("Thread %d finished\n", thread_id);
 

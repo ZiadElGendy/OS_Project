@@ -8,11 +8,23 @@
 void *func(void *arg)
 {
     int thread_id = *((int *)arg);
-    
+
     printf("Thread %d started\n", thread_id);
     for (int i = 0; i < 5; i++)
     {
-        printf("Thread %d is running\n", thread_id);
+        printf("Thread %d is running %d\n", thread_id, i + 1);
+        for (int j = 0; j < 99999999; j++)
+        {
+            int i = j + 1;
+            i = i - 1;
+            i = i * 2;
+            i = i / 2;
+            i = i + 1;
+            i = i - 1;
+            i = i * 2;
+            i = i % 2;
+            int result = j * j;
+        }
     }
     printf("Thread %d finished\n", thread_id);
 
@@ -36,8 +48,11 @@ int main()
 
     // Set scheduling policy to SCHED_FIFO
     struct sched_param param;
-    param.sched_priority = 99;
-    pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+    pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+    pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
+
+    param.sched_priority = sched_get_priority_max(SCHED_RR);
+    pthread_attr_setschedpolicy(&attr, SCHED_RR);
     pthread_attr_setschedparam(&attr, &param);
 
     // Set CPU affinity to ensure all threads run on the same CPU
@@ -55,7 +70,7 @@ int main()
     pthread_create(&ptid1, &attr, &func, (void *)&thread_id1);
     pthread_create(&ptid2, &attr, &func, (void *)&thread_id2);
     pthread_create(&ptid3, &attr, &func, (void *)&thread_id3);
-    pthread_create(&ptid4, &attr, &func, (void *)&thread_id4);
+    pthread_create(&ptid4, &attr, &func, (void *)&thread_id4); 
 
     pthread_attr_destroy(&attr);
 
