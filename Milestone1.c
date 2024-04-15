@@ -70,8 +70,8 @@ int main()
     struct sched_param param;
     pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
     //pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM); seems unnecessary, doesnt affect results
-    param.sched_priority = sched_get_priority_max(SCHED_RR);
-    pthread_attr_setschedpolicy(&attr, SCHED_RR);
+    param.sched_priority = sched_get_priority_max(SCHED_OTHER);
+    pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
     pthread_attr_setschedparam(&attr, &param);
 
     // Set CPU affinity to ensure all threads run on the same CPU
