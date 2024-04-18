@@ -5,6 +5,8 @@
 #include <sched.h>
 #include <unistd.h>
 
+struct timespec program_start_time;
+
 void busyWork() {
     for (int j = 0; j < 99999999; j++)
     {
@@ -26,9 +28,9 @@ void *func(void *arg)
 
     struct timespec start_time, end_time;
 
-    printf("Thread %d started\n", thread_id);
-
     clock_gettime(CLOCK_MONOTONIC, &start_time);
+
+    printf("Thread %d started\n", thread_id);
 
     busyWork();
 
@@ -43,16 +45,21 @@ void *func(void *arg)
     double execution_time = (end_time.tv_sec - start_time.tv_sec) +
                             (end_time.tv_nsec - start_time.tv_nsec) / 1e9;
 
+    double global_execution_time = (end_time.tv_sec - program_start_time.tv_sec) +
+                                   (end_time.tv_nsec - program_start_time.tv_nsec) / 1e9;
+
     printf("Thread %d finished\n", thread_id);
     printf("Thread %d start time: %ld.%09ld\n", thread_id, start_time.tv_sec, start_time.tv_nsec);
     printf("Thread %d end time: %ld.%09ld\n", thread_id, end_time.tv_sec, end_time.tv_nsec);
     printf("Thread %d execution time: %.9f seconds\n", thread_id, execution_time);
+    printf("Thread %d global execution time: %.9f seconds\n", thread_id, global_execution_time);
 
     pthread_exit(NULL);
 }
 
 int main()
 {
+    clock_gettime(CLOCK_MONOTONIC, &program_start_time);
     pthread_t ptid1;
     pthread_t ptid2;
     pthread_t ptid3;
@@ -66,7 +73,7 @@ int main()
     pthread_attr_t attr;
     pthread_attr_init(&attr);
 
-    // Set scheduling policy to SCHED_FIFO
+    // Set scheduling policy
     struct sched_param param;
     pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
     //pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM); seems unnecessary, doesnt affect results
