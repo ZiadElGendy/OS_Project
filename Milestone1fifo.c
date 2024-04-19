@@ -77,7 +77,7 @@ int main()
     struct sched_param param;
     pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
     param.sched_priority = sched_get_priority_max(SCHED_FIFO);
-    pthread_attr_setschedpolicy(&attr, );
+    pthread_attr_setschedpolicy(&attr, SCHED_FIFO );
     pthread_attr_setschedparam(&attr, &param);
 
     // Set CPU affinity to ensure all threads run on the same CPU
