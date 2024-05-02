@@ -60,11 +60,27 @@ struct PCB {
     int higherMemoryBound;
 };
 
+struct Process {
+    struct PCB pcb;
+    int quantum;
+};
+
 struct word {
-    char name[32];
-    char data[32];
+    char name[16];
+    char data[16];
 };
 
 struct memory {
     struct word words[60];
 };
+
+int main(){
+    while (readTxtFile() != null){
+        createNewProcess();
+        while (readline() != null)
+        {
+            parseInstruction();
+            checkQueues();
+        }
+    }
+}
