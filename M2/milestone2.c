@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAX_LINES 1024
-#define MAX_LINE_LENGTH 128
+#define MAX_LINES 256
+#define MAX_LINE_LENGTH 64
 #define MAX_FILE_NAME 64
+#define QUEUE_CAPACITY 32
 
 #pragma region int queue implementation
 struct Queue
@@ -138,17 +139,24 @@ char** readFile(int programNum)
     return lines;
 }
 
+void createProcess(int processId, char **lines)
+{
+    //much to think about
+}
+
 int main(){
-    
-    priority1Queue = *createQueue(10);
-    priority2Queue = *createQueue(10);
-    priority3Queue = *createQueue(10);
-    priority4Queue = *createQueue(10);
-    blockedQueue = *createQueue(10);
+
+    priority1Queue = *createQueue(QUEUE_CAPACITY);
+    priority2Queue = *createQueue(QUEUE_CAPACITY);
+    priority3Queue = *createQueue(QUEUE_CAPACITY);
+    priority4Queue = *createQueue(QUEUE_CAPACITY);
+    blockedQueue = *createQueue(QUEUE_CAPACITY);
 
     for (int i = 1; i <= 3; i++)
     {
         char **lines = readFile(i);
+        createProcess(i, lines);
+
         for (int j = 0; j < MAX_LINES; j++)
         {
             if (lines[j] == NULL)
