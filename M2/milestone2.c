@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define MAX_LINES 1024
+#define MAX_LINE_LENGTH 128
+#define MAX_FILE_NAME 64
+
 #pragma region int queue implementation
 struct Queue
 {
@@ -96,14 +100,62 @@ struct memory {
     struct word words[60];
 };
 
+char** readFile(int programNum)
+{
+    FILE *file;
+    char line[MAX_LINE_LENGTH];
+
+    // Open the file
+    char fileName[MAX_FILE_NAME];
+    sprintf(fileName, "Program_%d.txt", programNum); //Concatenate the filename
+    file = fopen(fileName, "r");
+
+    if (file == NULL)
+    {
+        perror("Error opening file");
+        return NULL;
+    }
+
+    // Allocate memory for storing lines
+    char **lines = (char **)malloc(MAX_LINES * sizeof(char *));
+    if (lines == NULL)
+    {
+        perror("Memory allocation error");
+        fclose(file);
+        return NULL;
+    }
+
+    int i = 0;
+    // Read lines until the end of the file
+    while (fgets(line, sizeof(line), file) != NULL && i < MAX_LINES)
+    {
+        lines[i] = strdup(line); // Allocate memory and copy line
+        i++;
+    }
+    // Close the file
+    fclose(file);
+
+    return lines;
+}
+
 int main(){
     
-    while (readTxtFile() != null){
-        createNewProcess();
-        while (readline() != null)
+    priority1Queue = *createQueue(10);
+    priority2Queue = *createQueue(10);
+    priority3Queue = *createQueue(10);
+    priority4Queue = *createQueue(10);
+    blockedQueue = *createQueue(10);
+
+    for (int i = 1; i <= 3; i++)
+    {
+        char **lines = readFile(i);
+        for (int j = 0; j < MAX_LINES; j++)
         {
-            parseInstruction();
-            checkQueues();
+            if (lines[j] == NULL)
+            {
+                break;
+            }
+            printf("%s", lines[j]);
         }
     }
 }
