@@ -213,6 +213,17 @@ int main(){
     priority4Queue = *createQueue(QUEUE_CAPACITY);
     blockedQueue = *createQueue(QUEUE_CAPACITY);
 
+    char cwd[1024];
+    if (getcwd(cwd, sizeof(cwd)) != NULL)
+    {
+        printf("Current working dir: %s\n", cwd);
+    }
+    else
+    {
+        perror("getcwd() error");
+        return 1;
+    }
+
     for (int i = 1; i <= 3; i++)
     {
         char **lines = readFile(i);
@@ -228,7 +239,7 @@ int main(){
         {
             numLines++;
         }
-        loadProgramIntoMemory(i, lines, numLines);
+        printf("Number of lines in program %d: %d\n", i, numLines);
 
         for (int j = 0; j < MAX_LINES; j++)
         {
@@ -239,6 +250,5 @@ int main(){
             printf("%s", lines[j]);
         }
     }
-
     printMemoryContents();
 }
