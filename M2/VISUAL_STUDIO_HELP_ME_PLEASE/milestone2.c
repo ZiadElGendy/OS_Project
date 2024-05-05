@@ -12,38 +12,38 @@ struct Queue
 {
     int front, rear, size;
     unsigned capacity;
-    int *array;
+    int* array;
 };
 
 // function to create a queue of given capacity. It initializes size of queue as 0
-struct Queue *createQueue(unsigned capacity)
+struct Queue* createQueue(unsigned capacity)
 {
-    struct Queue *queue = (struct Queue *)malloc(
+    struct Queue* queue = (struct Queue*)malloc(
         sizeof(struct Queue));
     queue->capacity = capacity;
     queue->front = queue->size = 0;
 
     // This is important, see the enqueue
     queue->rear = capacity - 1;
-    queue->array = (int *)malloc(
+    queue->array = (int*)malloc(
         queue->capacity * sizeof(int));
     return queue;
 }
 
 // Queue is full when size becomes equal to the capacity
-int isFull(struct Queue *queue)
+int isFull(struct Queue* queue)
 {
     return (queue->size == queue->capacity);
 }
 
 // Queue is empty when size is 0
-int isEmpty(struct Queue *queue)
+int isEmpty(struct Queue* queue)
 {
     return (queue->size == 0);
 }
 
 // Function to add an item to the queue. It changes rear and size
-void enqueue(struct Queue *queue, int item)
+void enqueue(struct Queue* queue, int item)
 {
     if (isFull(queue))
         return;
@@ -54,7 +54,7 @@ void enqueue(struct Queue *queue, int item)
 }
 
 // Function to remove an item from queue. It changes front and size
-int dequeue(struct Queue *queue)
+int dequeue(struct Queue* queue)
 {
     if (isEmpty(queue))
         return INT_MIN;
@@ -65,7 +65,7 @@ int dequeue(struct Queue *queue)
 }
 
 // Function to get front of queue
-int front(struct Queue *queue)
+int front(struct Queue* queue)
 {
     if (isEmpty(queue))
         return INT_MIN;
@@ -104,14 +104,14 @@ struct memory {
 
 char** readFile(int programNum)
 {
-    FILE *file;
+    FILE* file;
     char line[MAX_LINE_LENGTH];
 
     // Open the file
     char fileName[MAX_FILE_NAME];
-    sprintf(fileName, "Program_%d.txt", programNum); //Concatenate the filename
+    sprintf_s(fileName, "Program_%d.txt", programNum); //Concatenate the filename
     printf("Opening file:%s\n", fileName);
-    file = fopen(fileName, "r");
+    file = fopen_s(&file, fileName, "r");
 
     if (file == NULL)
     {
@@ -121,7 +121,7 @@ char** readFile(int programNum)
 
     //TODO: I think chatGPT is doing bullshit memory allocation, come back to this later
     // Allocate memory for storing lines
-    char **lines = (char **)malloc(MAX_LINES * sizeof(char *));
+    char** lines = (char**)malloc(MAX_LINES * sizeof(char*));
     if (lines == NULL)
     {
         perror("Memory allocation error");
@@ -133,7 +133,7 @@ char** readFile(int programNum)
     // Read lines until the end of the file
     while (fgets(line, sizeof(line), file) != NULL && i < MAX_LINES)
     {
-        lines[i] = strdup(line); // Allocate memory and copy line
+        lines[i] = _strdup(line); // Allocate memory and copy line
         i++;
     }
     lines[i] = NULL;
@@ -143,7 +143,7 @@ char** readFile(int programNum)
     return lines;
 }
 
-void loadProgramIntoMemory(int processId, char **lines, int numLines)
+void loadProgramIntoMemory(int processId, char** lines, int numLines)
 {
     //Find the first available memory block
     int lowerMemoryBound = 0;
@@ -156,46 +156,47 @@ void loadProgramIntoMemory(int processId, char **lines, int numLines)
         }
     }
     int upperMemoryBound = lowerMemoryBound + 9 + numLines; //5 for PCB, 3 for process variables, 1 for quantum, and the number of lines in the program
-    
+
     //Load PCB into memory
-    strcpy(memory.words[lowerMemoryBound].name, "pid");
-    sprintf(memory.words[lowerMemoryBound].data, "%d", processId);
+    strcpy_s(memory.words[lowerMemoryBound].name, sizeof(memory.words[lowerMemoryBound].name), "pid");
+    sprintf_s(memory.words[lowerMemoryBound].data, sizeof(memory.words[lowerMemoryBound].data), "%d", processId);
 
-    strcpy(memory.words[lowerMemoryBound + 1].name, "processState");
-    strcpy(memory.words[lowerMemoryBound + 1].data, "ready");
+    strcpy_s(memory.words[lowerMemoryBound + 1].name, sizeof(memory.words[lowerMemoryBound].name), "processState");
+    strcpy_s(memory.words[lowerMemoryBound + 1].data, sizeof(memory.words[lowerMemoryBound].data), "ready");
+                                                       
+    strcpy_s(memory.words[lowerMemoryBound + 2].name, sizeof(memory.words[lowerMemoryBound].name), "currentPriority");
+    strcpy_s(memory.words[lowerMemoryBound + 2].data, sizeof(memory.words[lowerMemoryBound].data), "1");
 
-    strcpy(memory.words[lowerMemoryBound + 2].name, "currentPriority");
-    strcpy(memory.words[lowerMemoryBound + 2].data, "1");
+    strcpy_s(memory.words[lowerMemoryBound + 3].name, sizeof(memory.words[lowerMemoryBound].name), "programCounter");
+    strcpy_s(memory.words[lowerMemoryBound + 3].data, sizeof(memory.words[lowerMemoryBound].data), "0");
 
-    strcpy(memory.words[lowerMemoryBound + 3].name, "programCounter");
-    strcpy(memory.words[lowerMemoryBound + 3].data, "0");
+    strcpy_s(memory.words[lowerMemoryBound + 4].name, sizeof(memory.words[lowerMemoryBound].name), "lowerMemoryBound");
+    sprintf_s(memory.words[lowerMemoryBound + 4].data,sizeof(memory.words[lowerMemoryBound].data),  "%d", lowerMemoryBound);
 
-    strcpy(memory.words[lowerMemoryBound + 4].name, "lowerMemoryBound");
-    sprintf(memory.words[lowerMemoryBound + 4].data, "%d", lowerMemoryBound);
-    
-    strcpy(memory.words[lowerMemoryBound + 5].name, "higherMemoryBound");
-    sprintf(memory.words[lowerMemoryBound + 5].data, "%d", upperMemoryBound);
+    strcpy_s(memory.words[lowerMemoryBound + 5].name, sizeof(memory.words[lowerMemoryBound].name), "higherMemoryBound");
+    sprintf_s(memory.words[lowerMemoryBound + 5].data, sizeof(memory.words[lowerMemoryBound].data),  "%d", upperMemoryBound);
 
 
     //Load process variables into memory
-    strcpy(memory.words[lowerMemoryBound + 6].name, "x");
-    strcpy(memory.words[lowerMemoryBound + 6].data, "0");
-
-    strcpy(memory.words[lowerMemoryBound + 7].name, "y");
-    strcpy(memory.words[lowerMemoryBound + 7].data, "0");
-
-    strcpy(memory.words[lowerMemoryBound + 8].name, "z");
-    strcpy(memory.words[lowerMemoryBound + 8].data, "0");
+    strcpy_s(memory.words[lowerMemoryBound + 6].name,sizeof(memory.words[lowerMemoryBound].name),  "x");
+    strcpy_s(memory.words[lowerMemoryBound + 6].data,sizeof(memory.words[lowerMemoryBound].data), "0");
+                                                                                                
+    strcpy_s(memory.words[lowerMemoryBound + 7].name,sizeof(memory.words[lowerMemoryBound].name), "y");
+    strcpy_s(memory.words[lowerMemoryBound + 7].data,sizeof(memory.words[lowerMemoryBound].data), "0");
+                                                                                                
+    strcpy_s(memory.words[lowerMemoryBound + 8].name,sizeof(memory.words[lowerMemoryBound].name), "z");
+    strcpy_s(memory.words[lowerMemoryBound + 8].data,sizeof(memory.words[lowerMemoryBound].data), "0");
 
     //Load program into memory
-    for(int i = 0; i < numLines; i++)
+    for (int i = 0; i < numLines; i++)
     {
-        sprintf(memory.words[lowerMemoryBound + 9 + i].name, "line %d", i);
-        strcpy(memory.words[lowerMemoryBound + 9 + i].data, lines[i]);
+        sprintf_s(memory.words[lowerMemoryBound + 9 + i].name, sizeof(memory.words[lowerMemoryBound].name), "line %d", i);
+        strcpy_s(memory.words[lowerMemoryBound + 9 + i].data, sizeof(memory.words[lowerMemoryBound].data), lines[i]);
     }
 
     //Load quantum into memory
-    strcpy(memory.words[upperMemoryBound].name, "quantum");
+    strcpy_s(memory.words[upperMemoryBound].name, sizeof(memory.words[lowerMemoryBound].name), "quantum");
+	strcpy_s(memory.words[upperMemoryBound].data, sizeof(memory.words[lowerMemoryBound].data), "0");
 }
 
 void printMemoryContents()
@@ -206,7 +207,7 @@ void printMemoryContents()
     }
 }
 
-int main(){
+int main() {
 
     priority1Queue = *createQueue(QUEUE_CAPACITY);
     priority2Queue = *createQueue(QUEUE_CAPACITY);
@@ -216,9 +217,9 @@ int main(){
 
     for (int i = 1; i <= 3; i++)
     {
-        char **lines = readFile(i);
+        char** lines = readFile(i);
 
-        if(lines == NULL)
+        if (lines == NULL)
         {
             perror("Error reading programs");
             return 1;
