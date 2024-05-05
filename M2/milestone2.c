@@ -110,7 +110,7 @@ char** readFile(int programNum)
     // Open the file
     char fileName[MAX_FILE_NAME];
     sprintf(fileName, "Program_%d.txt", programNum); //Concatenate the filename
-    printf("Reading file:%s\n", fileName);
+    printf("Opening file:%s\n", fileName);
     file = fopen(fileName, "r");
 
     if (file == NULL)
