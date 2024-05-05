@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MAX_LINES 256
 #define MAX_LINE_LENGTH 64
@@ -94,12 +95,12 @@ struct Process {
 
 struct word {
     char name[16];
-    char data[16];
+    char data[64];
 };
 
 struct memory {
     struct word words[60];
-};
+} memory; //global variable
 
 char** readFile(int programNum)
 {
@@ -109,6 +110,7 @@ char** readFile(int programNum)
     // Open the file
     char fileName[MAX_FILE_NAME];
     sprintf(fileName, "Program_%d.txt", programNum); //Concatenate the filename
+    printf("Reading file:%s\n", fileName);
     file = fopen(fileName, "r");
 
     if (file == NULL)
@@ -117,6 +119,7 @@ char** readFile(int programNum)
         return NULL;
     }
 
+    //TODO: I think chatGPT is doing bullshit memory allocation, come back to this later
     // Allocate memory for storing lines
     char **lines = (char **)malloc(MAX_LINES * sizeof(char *));
     if (lines == NULL)
@@ -139,9 +142,67 @@ char** readFile(int programNum)
     return lines;
 }
 
-void createProcess(int processId, char **lines)
+void loadProgramIntoMemory(int processId, char **lines, int numLines)
 {
-    //much to think about
+    //Find the first available memory block
+    int lowerMemoryBound = 0;
+    for (int i = 0; i < 60; i++)
+    {
+        if (memory.words[i].name[0] == '\0') //If the first character is the null character, then the memory block is available
+        {
+            lowerMemoryBound = i;
+            break;
+        }
+    }
+    int upperMemoryBound = lowerMemoryBound + 9 + numLines; //5 for PCB, 3 for process variables, 1 for quantum, and the number of lines in the program
+    
+    //Load PCB into memory
+    strcpy(memory.words[lowerMemoryBound].name, "pid");
+    sprintf(memory.words[lowerMemoryBound].data, "%d", processId);
+
+    strcpy(memory.words[lowerMemoryBound + 1].name, "processState");
+    strcpy(memory.words[lowerMemoryBound + 1].data, "ready");
+
+    strcpy(memory.words[lowerMemoryBound + 2].name, "currentPriority");
+    strcpy(memory.words[lowerMemoryBound + 2].data, "1");
+
+    strcpy(memory.words[lowerMemoryBound + 3].name, "programCounter");
+    strcpy(memory.words[lowerMemoryBound + 3].data, "0");
+
+    strcpy(memory.words[lowerMemoryBound + 4].name, "lowerMemoryBound");
+    sprintf(memory.words[lowerMemoryBound + 4].data, "%d", lowerMemoryBound);
+    
+    strcpy(memory.words[lowerMemoryBound + 5].name, "higherMemoryBound");
+    sprintf(memory.words[lowerMemoryBound + 5].data, "%d", upperMemoryBound);
+
+
+    //Load process variables into memory
+    strcpy(memory.words[lowerMemoryBound + 6].name, "x");
+    strcpy(memory.words[lowerMemoryBound + 6].data, "0");
+
+    strcpy(memory.words[lowerMemoryBound + 7].name, "y");
+    strcpy(memory.words[lowerMemoryBound + 7].data, "0");
+
+    strcpy(memory.words[lowerMemoryBound + 8].name, "z");
+    strcpy(memory.words[lowerMemoryBound + 8].data, "0");
+
+    //Load program into memory
+    for(int i = 0; i < numLines; i++)
+    {
+        sprintf(memory.words[lowerMemoryBound + 9 + i].name, "line %d", i);
+        strcpy(memory.words[lowerMemoryBound + 9 + i].data, lines[i]);
+    }
+
+    //Load quantum into memory
+    strcpy(memory.words[upperMemoryBound].name, "quantum");
+}
+
+void printMemoryContents()
+{
+    for (int i = 0; i < 60; i++)
+    {
+        printf("Word %d > %s: %s\n", i, memory.words[i].name, memory.words[i].data);
+    }
 }
 
 int main(){
@@ -155,7 +216,19 @@ int main(){
     for (int i = 1; i <= 3; i++)
     {
         char **lines = readFile(i);
-        createProcess(i, lines);
+
+        if(lines == NULL)
+        {
+            perror("Error reading programs");
+            return 1;
+        }
+
+        int numLines = 0;
+        while (lines[numLines] != NULL && numLines < MAX_LINES)
+        {
+            numLines++;
+        }
+        loadProgramIntoMemory(i, lines, numLines);
 
         for (int j = 0; j < MAX_LINES; j++)
         {
@@ -166,4 +239,6 @@ int main(){
             printf("%s", lines[j]);
         }
     }
+
+    printMemoryContents();
 }
