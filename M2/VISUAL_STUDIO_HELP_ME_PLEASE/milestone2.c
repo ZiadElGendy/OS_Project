@@ -109,9 +109,9 @@ char** readFile(int programNum)
 
     // Open the file
     char fileName[MAX_FILE_NAME];
-    sprintf_s(fileName, "Program_%d.txt", programNum); //Concatenate the filename
+    sprintf(fileName, "Program_%d.txt", programNum); //Concatenate the filename
     printf("Opening file:%s\n", fileName);
-    file = fopen_s(&file, fileName, "r");
+    file = fopen(fileName, "r");
 
     if (file == NULL)
     {
@@ -119,24 +119,34 @@ char** readFile(int programNum)
         return NULL;
     }
 
-    //TODO: I think chatGPT is doing bullshit memory allocation, come back to this later
-    // Allocate memory for storing lines
-    char** lines = (char**)malloc(MAX_LINES * sizeof(char*));
-    if (lines == NULL)
-    {
-        perror("Memory allocation error");
-        fclose(file);
-        return NULL;
-    }
-
+    char** lines = NULL;
     int i = 0;
+
     // Read lines until the end of the file
-    while (fgets(line, sizeof(line), file) != NULL && i < MAX_LINES)
+    while (fgets(line, sizeof(line), file) != NULL)
     {
-        lines[i] = _strdup(line); // Allocate memory and copy line
+		char** tmp = realloc(lines, (i + 1) * sizeof(*lines));
+		if (tmp == NULL)
+		{
+            perror("Memory reallocation error");
+            fclose(file);
+			free(lines);
+			return NULL;
+		}
+		lines = tmp;
+
+        lines[i] = _strdup(line);
+		if (lines[i] == NULL)
+		{
+			perror("Memory allocation error");
+			fclose(file);
+			free(lines);
+			return NULL;
+		}
         i++;
     }
-    lines[i] = NULL;
+	lines[i] = NULL;
+
     // Close the file
     fclose(file);
 
@@ -215,31 +225,12 @@ int main() {
     priority4Queue = *createQueue(QUEUE_CAPACITY);
     blockedQueue = *createQueue(QUEUE_CAPACITY);
 
-    for (int i = 1; i <= 3; i++)
-    {
-        char** lines = readFile(i);
+	char** lines = readFile(1);
 
-        if (lines == NULL)
-        {
-            perror("Error reading programs");
-            return 1;
-        }
-
-        int numLines = 0;
-        while (lines[numLines] != NULL && numLines < MAX_LINES)
-        {
-            numLines++;
-        }
-        printf("Number of lines in program %d: %d\n", i, numLines);
-
-        for (int j = 0; j < MAX_LINES; j++)
-        {
-            if (lines[j] == NULL)
-            {
-                break;
-            }
-            printf("%s", lines[j]);
-        }
+    int lineCount = 0;
+    while (lines[lineCount] != NULL) {
+        lineCount++;
     }
-    printMemoryContents();
+    printf("Number of lines: %d\n", lineCount);
+    Sleep(5000);
 }
