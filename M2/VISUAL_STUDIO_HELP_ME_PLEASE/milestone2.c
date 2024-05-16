@@ -169,6 +169,7 @@ void loadProgramIntoMemory(int processId, char** lines)
 {
     //Find the first available memory block
     int lowerMemoryBound = 0;
+
     for (int i = 0; i < 60; i++)
     {
         if (memory.words[i].name[0] == '\0') //If the first character is the null character, then the memory block is available
@@ -183,7 +184,13 @@ void loadProgramIntoMemory(int processId, char** lines)
         numLines++;
     }
 
-    int upperMemoryBound = lowerMemoryBound + 9 + numLines; //5 for PCB, 3 for process variables, 1 for quantum, and the number of lines in the program
+    int upperMemoryBound = lowerMemoryBound + 8 + numLines; //5 for PCB, 3 for process variables,and the number of lines in the program
+	if (upperMemoryBound > 59)
+    {
+		perror("Memory overflow");
+		//TODO: Compact memory in this case
+		return;
+	}
 
     //Load PCB into memory
     strcpy(memory.words[lowerMemoryBound].name, "pid");
@@ -206,13 +213,13 @@ void loadProgramIntoMemory(int processId, char** lines)
 
 
     //Load process variables into memory
-    strcpy(memory.words[lowerMemoryBound + 6].name,  "x");
+    strcpy(memory.words[lowerMemoryBound + 6].name,  "a");
     strcpy(memory.words[lowerMemoryBound + 6].data, "0");
                                                                                                 
-    strcpy(memory.words[lowerMemoryBound + 7].name, "y");
+    strcpy(memory.words[lowerMemoryBound + 7].name, "b");
     strcpy(memory.words[lowerMemoryBound + 7].data, "0");
                                                                                                 
-    strcpy(memory.words[lowerMemoryBound + 8].name, "z");
+    strcpy(memory.words[lowerMemoryBound + 8].name, "c");
     strcpy(memory.words[lowerMemoryBound + 8].data, "0");
 
     //Load program into memory
