@@ -242,6 +242,67 @@ void printMemoryContents()
     }
 }
 
+#pragma region program getters and setters
+char* getProgramState(int processId)
+{
+	for (int i = 0; i < 60; i++)
+	{
+		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
+		{
+			return memory.words[i + 1].data;
+		}
+	}
+	return NULL;
+}
+
+void setProgramState(int processId, char* state)
+{
+	for (int i = 0; i < 60; i++)
+	{
+		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
+		{
+			strcpy(memory.words[i + 1].data, state);
+			return;
+		}
+	}
+}
+
+int getProgramPriority(int processId)
+{
+	for (int i = 0; i < 60; i++)
+	{
+		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
+		{
+			return atoi(memory.words[i + 2].data);
+		}
+	}
+	return -1;
+}
+
+void setProgramPriority(int processId, int priority)
+{
+	for (int i = 0; i < 60; i++)
+	{
+		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
+		{
+			sprintf(memory.words[i + 2].data, "%d", priority);
+			return;
+		}
+	}
+}
+
+int getProgramCounter(int processId)
+{
+	for (int i = 0; i < 60; i++)
+	{
+		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
+		{
+			return atoi(memory.words[i + 3].data);
+		}
+	}
+	return -1;
+}
+
 int main() {
 
     priority1Queue = *createQueue(QUEUE_CAPACITY);
