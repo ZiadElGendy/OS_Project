@@ -205,12 +205,12 @@ void loadProgramIntoMemory(int processId, char** lines)
     strcpy(memory.words[lowerMemoryBound + 2].data, "1");
 
     strcpy(memory.words[lowerMemoryBound + 3].name, "programCounter");
-    strcpy(memory.words[lowerMemoryBound + 3].data, "0");
+    sprintf(memory.words[lowerMemoryBound + 3].data, "%d", lowerMemoryBound + 9);
 
     strcpy(memory.words[lowerMemoryBound + 4].name, "lowerMemoryBound");
     sprintf(memory.words[lowerMemoryBound + 4].data,  "%d", lowerMemoryBound);
 
-    strcpy(memory.words[lowerMemoryBound + 5].name, "higherMemoryBound");
+    strcpy(memory.words[lowerMemoryBound + 5].name, "upperMemoryBound");
     sprintf(memory.words[lowerMemoryBound + 5].data,  "%d", upperMemoryBound);
 
 
@@ -224,7 +224,7 @@ void loadProgramIntoMemory(int processId, char** lines)
     strcpy(memory.words[lowerMemoryBound + 8].name, "c");
     strcpy(memory.words[lowerMemoryBound + 8].data, "0");
 
-    //Load program into memory
+    //Load instructions into memory
     for (int i = 0; i < numLines; i++)
     {
         sprintf(memory.words[lowerMemoryBound + 9 + i].name, "line %d", i);
@@ -242,6 +242,30 @@ void printMemoryContents()
 #pragma endregion
 
 #pragma region program getters and setters
+int getLowerMemoryBound(int processId)
+{
+	for (int i = 0; i < 60; i++)
+	{
+		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+int getUpperMemoryBound(int processId)
+{
+	for (int i = 0; i < 60; i++)
+	{
+		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
+		{
+			return atoi(memory.words[i + 5].data);
+		}
+	}
+	return -1;
+}
+
 char* getProgramState(int processId)
 {
 	for (int i = 0; i < 60; i++)
@@ -323,14 +347,25 @@ char* getCurrentInstruction(int processId)
 		return NULL;
 	}
 
-	for (int i = 0; i < 60; i++)
+	return memory.words[programCounter].data;  
+}
+
+int getQuantum(int processId)
+{
+	int lowerMemoryBound = getLowerMemoryBound(processId);
+	if (lowerMemoryBound == -1)
 	{
-		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
-		{
-			return memory.words[i + 9 + programCounter].data;
-		}
+		return -1;
 	}
-	return NULL;   
+
+	int programCounter = getProgramCounter(processId);
+	if (programCounter == -1)
+	{
+		return -1;
+	}
+
+	return programCounter - lowerMemoryBound - 9;
+
 }
 
 char* getVariableValue(int processId, char variableName)
@@ -399,6 +434,10 @@ int main()
 	printf("Program 2 current instuction:");
 	char* pointer = getCurrentInstruction(2);
 	puts(pointer);
+
+	printf("Program 2 current quantum:");
+	pointer = getQuantum(2);
+	printf("%d", pointer);
 
     Sleep(1000000);
 }
