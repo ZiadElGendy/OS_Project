@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define MAX_LINES 256
 #define MAX_LINE_LENGTH 64
@@ -110,6 +111,7 @@ struct memory {
     struct word words[60];
 } memory; //global variable
 
+#pragma region program loading
 char** readFile(int programNum)
 {
     FILE* file;
@@ -228,10 +230,6 @@ void loadProgramIntoMemory(int processId, char** lines)
         sprintf(memory.words[lowerMemoryBound + 9 + i].name, "line %d", i);
         strcpy(memory.words[lowerMemoryBound + 9 + i].data, lines[i]);
     }
-
-    //Load quantum into memory
-    strcpy(memory.words[upperMemoryBound].name, "quantum");
-	strcpy(memory.words[upperMemoryBound].data, "0");
 }
 
 void printMemoryContents()
@@ -241,6 +239,7 @@ void printMemoryContents()
         printf("Word %d > %s: %s\n", i, memory.words[i].name, memory.words[i].data);
     }
 }
+#pragma endregion
 
 #pragma region program getters and setters
 char* getProgramState(int processId)
@@ -303,7 +302,87 @@ int getProgramCounter(int processId)
 	return -1;
 }
 
-int main() {
+void incrementProgramCounter(int processId)
+{
+	for (int i = 0; i < 60; i++)
+	{
+		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
+		{
+			int programCounter = atoi(memory.words[i + 3].data);
+			sprintf(memory.words[i + 3].data, "%d", programCounter + 1);
+			return;
+		}
+	}
+}
+
+char* getCurrentInstruction(int processId)
+{
+	int programCounter = getProgramCounter(processId);
+	if (programCounter == -1)
+	{
+		return NULL;
+	}
+
+	for (int i = 0; i < 60; i++)
+	{
+		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
+		{
+			return memory.words[i + 9 + programCounter].data;
+		}
+	}
+	return NULL;   
+}
+
+char* getVariableValue(int processId, char variableName)
+{
+	for (int i = 0; i < 60; i++)
+	{
+		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
+		{
+			if (variableName == "a")
+            {
+				return memory.words[i + 6].data;
+			}
+            else if (variableName == "b")
+            {
+				return memory.words[i + 7].data;
+			}
+            else if (variableName == "c")
+            {
+				return memory.words[i + 8].data;
+			}
+		}
+	}
+	return NULL;
+}
+
+char* setVariableValue(int processId, char variableName)
+{
+	for (int i = 0; i < 60; i++)
+	{
+		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
+		{
+			if (variableName == "a")
+			{
+				return memory.words[i + 6].data;
+			}
+			else if (variableName == "b")
+			{
+				return memory.words[i + 7].data;
+			}
+			else if (variableName == "c")
+			{
+				return memory.words[i + 8].data;
+			}
+		}
+	}
+	return NULL;
+}
+
+#pragma endregion
+
+int main()
+{
 
     priority1Queue = *createQueue(QUEUE_CAPACITY);
     priority2Queue = *createQueue(QUEUE_CAPACITY);
@@ -317,5 +396,9 @@ int main() {
         loadProgramIntoMemory(i, lines);
 	}
 	printMemoryContents();
+	printf("Program 2 current instuction:");
+	char* pointer = getCurrentInstruction(2);
+	puts(pointer);
+
     Sleep(1000000);
 }
