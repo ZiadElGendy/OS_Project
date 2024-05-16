@@ -232,13 +232,6 @@ void loadProgramIntoMemory(int processId, char** lines)
     }
 }
 
-void printMemoryContents()
-{
-    for (int i = 0; i < 60; i++)
-    {
-        printf("Word %d > %s: %s\n", i, memory.words[i].name, memory.words[i].data);
-    }
-}
 #pragma endregion
 
 #pragma region program getters and setters
@@ -416,6 +409,7 @@ char* setVariableValue(int processId, char variableName)
 
 #pragma endregion
 
+#pragma region program execution
 void queueProcess(int pid)
 {
 	int priority = getProgramPriority(pid);
@@ -438,6 +432,55 @@ void queueProcess(int pid)
 		break;
 	}
 }
+#pragma endregion
+
+#pragma region printing
+void printMemoryContents()
+{
+	for (int i = 0; i < 60; i++)
+	{
+		printf("Word %d > %s: %s\n", i, memory.words[i].name, memory.words[i].data);
+	}
+}
+
+void printQueues()
+{
+	printf("Priority 1 queue: ");
+	for (int i = 0; i < priority1Queue.size; i++)
+	{
+		printf("%d ", priority1Queue.array[i]);
+	}
+	printf("\n");
+
+	printf("Priority 2 queue: ");
+	for (int i = 0; i < priority2Queue.size; i++)
+	{
+		printf("%d ", priority2Queue.array[i]);
+	}
+	printf("\n");
+
+	printf("Priority 3 queue: ");
+	for (int i = 0; i < priority3Queue.size; i++)
+	{
+		printf("%d ", priority3Queue.array[i]);
+	}
+	printf("\n");
+
+	printf("Priority 4 queue: ");
+	for (int i = 0; i < priority4Queue.size; i++)
+	{
+		printf("%d ", priority4Queue.array[i]);
+	}
+	printf("\n");
+
+	printf("Blocked queue: ");
+	for (int i = 0; i < blockedQueue.size; i++)
+	{
+		printf("%d ", blockedQueue.array[i]);
+	}
+	printf("\n");
+}	
+#pragma endregion
 
 int main()
 {
@@ -452,9 +495,10 @@ int main()
     {
         char** lines = readFile(i);
         loadProgramIntoMemory(i, lines);
-
+		queueProcess(i);
 	}
 	printMemoryContents();
+	printQueues();
 	printf("Program 2 current instuction:");
 	char* pointer = getCurrentInstruction(2);
 	puts(pointer);
