@@ -73,11 +73,19 @@ int front(struct Queue* queue)
 }
 #pragma endregion
 
+
+bool inputBSemaphore = true;
+bool outputBSemaphore = true;
+bool fileBSemaphore = true;
+
 struct Queue priority1Queue;
 struct Queue priority2Queue;
 struct Queue priority3Queue;
 struct Queue priority4Queue;
 struct Queue blockedQueue;
+struct Queue inputQueue;
+struct Queue outputQueue;
+struct Queue fileQueue;
 
 struct PCB {
     int pid;
