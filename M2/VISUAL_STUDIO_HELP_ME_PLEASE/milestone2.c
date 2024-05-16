@@ -416,6 +416,29 @@ char* setVariableValue(int processId, char variableName)
 
 #pragma endregion
 
+void queueProcess(int pid)
+{
+	int priority = getProgramPriority(pid);
+	switch (priority)
+	{
+	case 1:
+		enqueue(&priority1Queue, pid);
+		break;
+	case 2:
+		enqueue(&priority2Queue, pid);
+		break;
+	case 3:
+		enqueue(&priority3Queue, pid);
+		break;
+	case 4:
+		enqueue(&priority4Queue, pid);
+		break;
+	default:
+		perror("Invalid priority");
+		break;
+	}
+}
+
 int main()
 {
 
@@ -429,6 +452,7 @@ int main()
     {
         char** lines = readFile(i);
         loadProgramIntoMemory(i, lines);
+
 	}
 	printMemoryContents();
 	printf("Program 2 current instuction:");
