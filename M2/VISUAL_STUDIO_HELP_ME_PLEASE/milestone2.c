@@ -478,23 +478,45 @@ void assign(int pid, char varX, char* strY) {
 
 void writeFile(char* fileName, char* data){
     
-	for (int i = 0; i < 60; i++) {
-		if(memory.words[i].name == NULL){
-			strcpy(memory.words[i].name, fileName);
-			strcpy(memory.words[i].data, data);
-			break;
-		}
+	// Open the file in write mode
+	FILE* file = fopen(fileName, "w");
+
+
+	// Write data to the file
+	fprintf(file, "%s", data);
+	
+	// Check if the file was opened successfully
+	if (file == NULL) {
+		printf("Error opening file.\n");
+		return;
 	}
+
+	// Close the file
+	fclose(file);
+
+	printf("File %s created successfully.\n", fileName);
+
 }
 
 char* readFile(char* fileName){
 
-	for (int i = 0; i < 60; i++) {
-		if (strcmp(memory.words[i].name, fileName) == 0) {
-			return memory.words[i].data;
-		}
+	// Open the file in read mode
+	FILE* file = fopen(fileName, "r");
+
+	// Check if the file was opened successfully
+	if (file == NULL) {
+		printf("Error opening file.\n");
+		return;
 	}
-	return "File does not exist";
+
+	// Read and print the contents of the file
+	char buffer[1000]; // Assuming a maximum line length of 1000 characters
+	while (fgets(buffer, sizeof(buffer), file) != NULL) {
+		printf("%s\n", buffer);
+	}
+
+	// Close the file
+	fclose(file);
 }
 
 //print all numbers between x and y
@@ -681,11 +703,7 @@ int main()
 			queueProcess(currentProcessId);
 		}
 	}
-	//writeFile("m", "m");
 	printMemoryContents();
-	char* newFile = readFile("m");
-	//printf("%s\n", newFile);
-
 	
 	printf("All programs have finished executing, press any key to exit\n");
 	scanf("%s");
