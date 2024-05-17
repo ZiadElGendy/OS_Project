@@ -120,7 +120,7 @@ struct memory {
 } memory; //global variable
 
 #pragma region program loading
-char** readFile(int programNum)
+char** readInstructionFile(int programNum)
 {
     FILE* file;
     char line[MAX_LINE_LENGTH];
@@ -403,15 +403,15 @@ char* getVariableValue(int processId, char variableName)
 	{
 		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
 		{
-			if (variableName == "a")
+			if (variableName == 'a')
             {
 				return memory.words[i + 6].data;
 			}
-            else if (variableName == "b")
+            else if (variableName == 'b')
             {
 				return memory.words[i + 7].data;
 			}
-            else if (variableName == "c")
+            else if (variableName == 'c')
             {
 				return memory.words[i + 8].data;
 			}
@@ -420,7 +420,7 @@ char* getVariableValue(int processId, char variableName)
 	return NULL;
 }
 
-char* setVariableValue(int processId, char variableName)
+void setVariableValue(int processId, char variableName, char* newData)
 {
 	for (int i = 0; i < 60; i++)
 	{
@@ -428,19 +428,110 @@ char* setVariableValue(int processId, char variableName)
 		{
 			if (variableName == 'a')
 			{
-				return memory.words[i + 6].data;
+				strcpy(memory.words[i + 6].data, newData);
 			}
 			else if (variableName == 'b')
 			{
-				return memory.words[i + 7].data;
+				strcpy(memory.words[i + 7].data, newData);
 			}
 			else if (variableName == 'c')
 			{
-				return memory.words[i + 8].data;
+				strcpy(memory.words[i + 8].data, newData);
 			}
 		}
 	}
-	return NULL;
+}
+
+#pragma endregion
+
+#pragma region program execution
+
+//print value of varx
+void print(int pid, char varX){
+    char* value = getVariableValue(pid, varX);
+	//char* value = "Hello world!";
+    printf("%s\n", value);
+
+    return;
+}
+
+//make a variable x, and assign y [ y could be input, int or string]
+void assign(int pid, char varX, char* strY) {
+	char str[64];
+	if (strcmp(strY, "input") == 0) {
+		printf("Please enter a value: ");
+		scanf("%s", str);
+		setVariableValue(pid, varX, str);
+	}
+	else {
+		setVariableValue(pid, varX, strY);
+	}
+}
+//void assign(int pid, char varX, int intY) {
+//	char str[64];
+//	sprintf(str, "% d", intY);
+//	setVariableValue(pid, varX, str);
+//}
+
+
+
+
+void writeFile(char* fileName, char* data){
+    
+	for (int i = 0; i < 60; i++) {
+		if(memory.words[i].name == NULL){
+			strcpy(memory.words[i].name, fileName);
+			strcpy(memory.words[i].data, data);
+			break;
+		}
+	}
+}
+
+char* readFile(char* fileName){
+
+	for (int i = 0; i < 60; i++) {
+		if (strcmp(memory.words[i].name, fileName) == 0) {
+			return memory.words[i].data;
+		}
+	}
+	return "File does not exist";
+}
+
+//print all numbers between x and y
+void printFromTo(int pid, char varX, char varY) {
+	int x = atoi(getVariableValue(pid, varX));
+	int y = atoi(getVariableValue(pid, varY));
+
+	for (int i = x + 1; i < y; i++) {
+		printf("%i\n", i);
+	}
+	return;
+}
+
+void semWait(char* Sem){
+	if (strcmp(Sem, "userInput") == 0) {
+		inputBSemaphore = false;
+	}
+	else if (strcmp(Sem, "userOutput") == 0){
+		outputBSemaphore = false;
+	}
+	else
+	{
+		fileBSemaphore = false;
+	}
+}
+
+void semSignal(char* Sem){
+	if (strcmp(Sem, "userInput") == 0) {
+		inputBSemaphore = true;
+	}
+	else if (strcmp(Sem, "userOutput") == 0) {
+		outputBSemaphore = true;
+	}
+	else
+	{
+		fileBSemaphore = true;
+	}
 }
 
 #pragma endregion
@@ -554,7 +645,7 @@ int main()
 	//Load programs into memory
 	for (int i = 1; i <= 3; i++)
     {
-        char** lines = readFile(i);
+        char** lines = readInstructionFile(i);
         loadProgramIntoMemory(i, lines);
 		queueProcess(i);
 	}
@@ -571,10 +662,10 @@ int main()
 		}
 
 		//printMemoryContents();
-		printQueues();
-		printf("Current running process: %d\n", currentProcessId);
+		//printQueues();
+		//printf("Current running process: %d\n", currentProcessId);
 
-		setProgramState(currentProcessId, "running");
+		ProgramState(currentProcessId, "running");
 		//execute()
 		setProgramState(currentProcessId, "ready");
 		pc = incrementProgramCounter(currentProcessId);
@@ -590,6 +681,12 @@ int main()
 			queueProcess(currentProcessId);
 		}
 	}
+	//writeFile("m", "m");
+	printMemoryContents();
+	char* newFile = readFile("m");
+	//printf("%s\n", newFile);
+
+	
 	printf("All programs have finished executing, press any key to exit\n");
 	scanf("%s");
 }
