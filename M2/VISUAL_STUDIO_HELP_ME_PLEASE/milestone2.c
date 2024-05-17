@@ -3,6 +3,14 @@
 #include <string.h>
 #include <stdbool.h>
 
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+
 #define MAX_LINES 256
 #define MAX_LINE_LENGTH 64
 #define MAX_FILE_NAME 64
@@ -259,6 +267,64 @@ int getUpperMemoryBound(int processId)
 	return -1;
 }
 
+int getProgramCounter(int processId)
+{
+	for (int i = 0; i < 60; i++)
+	{
+		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
+		{
+			return atoi(memory.words[i + 3].data);
+		}
+	}
+	return -1;
+}
+
+int incrementProgramCounter(int processId)
+{
+	for (int i = 0; i < 60; i++)
+	{
+		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
+		{
+			int programCounter = atoi(memory.words[i + 3].data);
+			if (programCounter > getUpperMemoryBound(processId))
+			{
+				return -1;
+			}	
+			sprintf(memory.words[i + 3].data, "%d", programCounter + 1);
+			return programCounter + 1;
+		}
+	}
+}
+
+char* getCurrentInstruction(int processId)
+{
+	int programCounter = getProgramCounter(processId);
+	if (programCounter == -1)
+	{
+		return NULL;
+	}
+
+	return memory.words[programCounter].data;
+}
+
+int getQuantum(int processId)
+{
+	int lowerMemoryBound = getLowerMemoryBound(processId);
+	if (lowerMemoryBound == -1)
+	{
+		return -1;
+	}
+
+	int programCounter = getProgramCounter(processId);
+	if (programCounter == -1)
+	{
+		return -1;
+	}
+
+	return programCounter - lowerMemoryBound - 9;
+
+}
+
 char* getProgramState(int processId)
 {
 	for (int i = 0; i < 60; i++)
@@ -295,70 +361,40 @@ int getProgramPriority(int processId)
 	return -1;
 }
 
-void setProgramPriority(int processId, int priority)
+void updateProgramPriority(int processId)
 {
+	int quantum = getQuantum(processId);
+	if (quantum == -1)
+	{
+		perror("Invalid quantum");
+		return;
+	}
+
+	char newPriority; // Changed to char from char*
+	if (quantum < 1)
+	{
+		newPriority = '1'; // Removed the dereference operator *
+	}
+	else if (quantum < 2)
+	{
+		newPriority = '2';
+	}
+	else if (quantum < 4)
+	{
+		newPriority = '3';
+	}
+	else
+	{
+		newPriority = '4';
+	}
+
 	for (int i = 0; i < 60; i++)
 	{
 		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
 		{
-			sprintf(memory.words[i + 2].data, "%d", priority);
-			return;
+			strncpy(memory.words[i + 2].data, &newPriority, 1); // Used strncpy to copy a single character
 		}
 	}
-}
-
-int getProgramCounter(int processId)
-{
-	for (int i = 0; i < 60; i++)
-	{
-		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
-		{
-			return atoi(memory.words[i + 3].data);
-		}
-	}
-	return -1;
-}
-
-void incrementProgramCounter(int processId)
-{
-	for (int i = 0; i < 60; i++)
-	{
-		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
-		{
-			int programCounter = atoi(memory.words[i + 3].data);
-			sprintf(memory.words[i + 3].data, "%d", programCounter + 1);
-			return;
-		}
-	}
-}
-
-char* getCurrentInstruction(int processId)
-{
-	int programCounter = getProgramCounter(processId);
-	if (programCounter == -1)
-	{
-		return NULL;
-	}
-
-	return memory.words[programCounter].data;  
-}
-
-int getQuantum(int processId)
-{
-	int lowerMemoryBound = getLowerMemoryBound(processId);
-	if (lowerMemoryBound == -1)
-	{
-		return -1;
-	}
-
-	int programCounter = getProgramCounter(processId);
-	if (programCounter == -1)
-	{
-		return -1;
-	}
-
-	return programCounter - lowerMemoryBound - 9;
-
 }
 
 char* getVariableValue(int processId, char variableName)
@@ -390,15 +426,15 @@ char* setVariableValue(int processId, char variableName)
 	{
 		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
 		{
-			if (variableName == "a")
+			if (variableName == 'a')
 			{
 				return memory.words[i + 6].data;
 			}
-			else if (variableName == "b")
+			else if (variableName == 'b')
 			{
 				return memory.words[i + 7].data;
 			}
-			else if (variableName == "c")
+			else if (variableName == 'c')
 			{
 				return memory.words[i + 8].data;
 			}
@@ -432,54 +468,78 @@ void queueProcess(int pid)
 		break;
 	}
 }
+
+int dequeNextProcess()
+{
+	if (priority1Queue.size > 0)
+	{
+		return dequeue(&priority1Queue);
+	}
+	else if (priority2Queue.size > 0)
+	{
+		return dequeue(&priority2Queue);
+	}
+	else if (priority3Queue.size > 0)
+	{
+		return dequeue(&priority3Queue);
+	}
+	else if (priority4Queue.size > 0)
+	{
+		return dequeue(&priority4Queue);
+	}
+	else
+	{
+		printf("All queues are empty\n");
+		return -1;
+	}
+}
 #pragma endregion
 
 #pragma region printing
-void printMemoryContents()
-{
-	for (int i = 0; i < 60; i++)
-	{
-		printf("Word %d > %s: %s\n", i, memory.words[i].name, memory.words[i].data);
+void printMemoryContents() {
+	for (int i = 0; i < 60; i++) {
+
+		char* name_color = ANSI_COLOR_CYAN;
+		char* data_color = ANSI_COLOR_GREEN;
+
+		if (strcmp(memory.words[i].name, "pid") == 0) {
+			name_color = ANSI_COLOR_RED;
+			data_color = ANSI_COLOR_RED;
+		}
+
+		// Print the memory contents with the appropriate colors
+		printf("Word %-2d > %s%-20s" ANSI_COLOR_RESET ": %s%s" ANSI_COLOR_RESET "\n", i, name_color, memory.words[i].name, data_color, memory.words[i].data);
 	}
 }
 
-void printQueues()
-{
-	printf("Priority 1 queue: ");
-	for (int i = 0; i < priority1Queue.size; i++)
-	{
-		printf("%d ", priority1Queue.array[i]);
+void printQueue(struct Queue* queue) {
+	int i;
+	for (i = queue->front; i != (queue->rear + 1) % queue->capacity; i = (i + 1) % queue->capacity) {
+		printf("%d ", queue->array[i]);
 	}
+}
+
+void printQueues() {
+	printf(ANSI_COLOR_RED "Priority 1 queue: ");
+	printQueue(&priority1Queue);
 	printf("\n");
 
-	printf("Priority 2 queue: ");
-	for (int i = 0; i < priority2Queue.size; i++)
-	{
-		printf("%d ", priority2Queue.array[i]);
-	}
+	printf(ANSI_COLOR_YELLOW "Priority 2 queue: ");
+	printQueue(&priority2Queue);
 	printf("\n");
 
-	printf("Priority 3 queue: ");
-	for (int i = 0; i < priority3Queue.size; i++)
-	{
-		printf("%d ", priority3Queue.array[i]);
-	}
+	printf(ANSI_COLOR_GREEN "Priority 3 queue: ");
+	printQueue(&priority3Queue);
 	printf("\n");
 
-	printf("Priority 4 queue: ");
-	for (int i = 0; i < priority4Queue.size; i++)
-	{
-		printf("%d ", priority4Queue.array[i]);
-	}
+	printf(ANSI_COLOR_BLUE "Priority 4 queue: ");
+	printQueue(&priority4Queue);
 	printf("\n");
 
-	printf("Blocked queue: ");
-	for (int i = 0; i < blockedQueue.size; i++)
-	{
-		printf("%d ", blockedQueue.array[i]);
-	}
+	printf(ANSI_COLOR_RESET "Blocked queue: ");
+	printQueue(&blockedQueue);
 	printf("\n");
-}	
+}
 #pragma endregion
 
 int main()
@@ -491,21 +551,45 @@ int main()
     priority4Queue = *createQueue(QUEUE_CAPACITY);
     blockedQueue = *createQueue(QUEUE_CAPACITY);
 
+	//Load programs into memory
 	for (int i = 1; i <= 3; i++)
     {
         char** lines = readFile(i);
         loadProgramIntoMemory(i, lines);
 		queueProcess(i);
 	}
-	printMemoryContents();
-	printQueues();
-	printf("Program 2 current instuction:");
-	char* pointer = getCurrentInstruction(2);
-	puts(pointer);
 
-	printf("Program 2 current quantum:");
-	pointer = getQuantum(2);
-	printf("%d", pointer);
+	int currentProcessId;
+	int pc;
+	//Execute programs
+	while (true)
+	{
+		currentProcessId = dequeNextProcess();
+		if (currentProcessId == -1)
+		{
+			break;
+		}
 
-    Sleep(1000000);
+		//printMemoryContents();
+		printQueues();
+		printf("Current running process: %d\n", currentProcessId);
+
+		setProgramState(currentProcessId, "running");
+		//execute()
+		setProgramState(currentProcessId, "ready");
+		pc = incrementProgramCounter(currentProcessId);
+		updateProgramPriority(currentProcessId);
+		if (pc == -1)
+		{
+			//Program has finished
+			setProgramState(currentProcessId, "terminated");
+			//TODO: Free memory
+		}
+		else
+		{
+			queueProcess(currentProcessId);
+		}
+	}
+	printf("All programs have finished executing, press any key to exit\n");
+	scanf("%s");
 }
