@@ -665,7 +665,7 @@ int main()
 		//printQueues();
 		//printf("Current running process: %d\n", currentProcessId);
 
-		ProgramState(currentProcessId, "running");
+		setProgramState(currentProcessId, "running");
 		//execute()
 		setProgramState(currentProcessId, "ready");
 		pc = incrementProgramCounter(currentProcessId);
