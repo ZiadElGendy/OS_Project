@@ -440,15 +440,15 @@ char* getVariableValue(int processId, char variableName)
 	{
 		if (strcmp(memory.words[i].name, "pid") == 0 && atoi(memory.words[i].data) == processId)
 		{
-			if (variableName == "a")
+			if (variableName == 'a')
             {
 				return memory.words[i + 6].data;
 			}
-            else if (variableName == "b")
+            else if (variableName == 'b')
             {
 				return memory.words[i + 7].data;
 			}
-            else if (variableName == "c")
+            else if (variableName == 'c')
             {
 				return memory.words[i + 8].data;
 			}
@@ -457,7 +457,7 @@ char* getVariableValue(int processId, char variableName)
 	return NULL;
 }
 
-char* setVariableValue(int processId, char variableName)
+void setVariableValue(int processId, char variableName, char* newData)
 {
 	for (int i = 0; i < 60; i++)
 	{
@@ -465,19 +465,132 @@ char* setVariableValue(int processId, char variableName)
 		{
 			if (variableName == 'a')
 			{
-				return memory.words[i + 6].data;
+				strcpy(memory.words[i + 6].data, newData);
 			}
 			else if (variableName == 'b')
 			{
-				return memory.words[i + 7].data;
+				strcpy(memory.words[i + 7].data, newData);
 			}
 			else if (variableName == 'c')
 			{
-				return memory.words[i + 8].data;
+				strcpy(memory.words[i + 8].data, newData);
 			}
 		}
 	}
-	return NULL;
+}
+
+#pragma endregion
+
+#pragma region program execution
+
+//print value of varx
+void print(int pid, char varX){
+    char* value = getVariableValue(pid, varX);
+	//char* value = "Hello world!";
+    printf("%s\n", value);
+
+    return;
+}
+
+//make a variable x, and assign y [ y could be input, int or string]
+void assign(int pid, char varX, char* strY) {
+	char str[64];
+	if (strcmp(strY, "input") == 0) {
+		printf("Please enter a value: ");
+		scanf("%s", str);
+		setVariableValue(pid, varX, str);
+	}
+	else {
+		setVariableValue(pid, varX, strY);
+	}
+}
+//void assign(int pid, char varX, int intY) {
+//	char str[64];
+//	sprintf(str, "% d", intY);
+//	setVariableValue(pid, varX, str);
+//}
+
+
+
+
+void writeFile(char* fileName, char* data){
+    
+	// Open the file in write mode
+	FILE* file = fopen(fileName, "w");
+
+
+	// Write data to the file
+	fprintf(file, "%s", data);
+	
+	// Check if the file was opened successfully
+	if (file == NULL) {
+		printf("Error opening file.\n");
+		return;
+	}
+
+	// Close the file
+	fclose(file);
+
+	printf("File %s created successfully.\n", fileName);
+
+}
+
+char* readFile(char* fileName){
+
+	// Open the file in read mode
+	FILE* file = fopen(fileName, "r");
+
+	// Check if the file was opened successfully
+	if (file == NULL) {
+		printf("Error opening file.\n");
+		return;
+	}
+
+	// Read and print the contents of the file
+	char buffer[1000]; // Assuming a maximum line length of 1000 characters
+	while (fgets(buffer, sizeof(buffer), file) != NULL) {
+		printf("%s\n", buffer);
+	}
+
+	// Close the file
+	fclose(file);
+}
+
+//print all numbers between x and y
+void printFromTo(int pid, char varX, char varY) {
+	int x = atoi(getVariableValue(pid, varX));
+	int y = atoi(getVariableValue(pid, varY));
+
+	for (int i = x + 1; i < y; i++) {
+		printf("%i\n", i);
+	}
+	return;
+}
+
+void semWait(char* Sem){
+	if (strcmp(Sem, "userInput") == 0) {
+		inputBSemaphore = false;
+	}
+	else if (strcmp(Sem, "userOutput") == 0){
+		outputBSemaphore = false;
+	}
+	else
+	{
+		fileBSemaphore = false;
+	}
+}
+
+void semSignal(char* Sem){
+	if (strcmp(Sem, "userInput") == 0) {
+		inputBSemaphore = true;
+	}
+	else if (strcmp(Sem, "userOutput") == 0) {
+		outputBSemaphore = true;
+	}
+	else
+	{
+		fileBSemaphore = true;
+	}
 }
 
 #pragma endregion
@@ -530,6 +643,70 @@ int dequeNextProcess()
 	}
 }
 #pragma endregion
+char** splitString(const char* str, int* numTokens) {
+	// Copy the input string to avoid modifying the original
+	char* strCopy = strdup(str);
+	if (!strCopy) {
+		perror("strdup");
+		return NULL;
+	}
+
+	// Initial allocation for tokens
+	int tokensAllocated = 10;
+	char** tokens = malloc(tokensAllocated * sizeof(char*));
+	if (!tokens) {
+		perror("malloc");
+		free(strCopy);
+		return NULL;
+	}
+
+	int tokenCount = 0;
+	char* token = strtok(strCopy, " ");
+	while (token) {
+		if (tokenCount >= tokensAllocated) {
+			tokensAllocated *= 2;
+			char** temp = realloc(tokens, tokensAllocated * sizeof(char*));
+			if (!temp) {
+				perror("realloc");
+				for (int i = 0; i < tokenCount; i++) {
+					free(tokens[i]);
+				}
+				free(tokens);
+				free(strCopy);
+				return NULL;
+			}
+			tokens = temp;
+		}
+		tokens[tokenCount++] = strdup(token);
+		token = strtok(NULL, " ");
+	}
+
+	// Shrink the array to the actual number of tokens
+	char** result = realloc(tokens, tokenCount * sizeof(char*));
+	if (!result && tokenCount > 0) {
+		perror("realloc");
+		for (int i = 0; i < tokenCount; i++) {
+			free(tokens[i]);
+		}
+		free(tokens);
+		free(strCopy);
+		return NULL;
+	}
+
+	tokens = result;
+	*numTokens = tokenCount;
+
+	free(strCopy);
+	return tokens;
+}
+
+// Function to free the allocated memory for tokens
+void freeTokens(char** tokens, int numTokens) {
+	for (int i = 0; i < numTokens; i++) {
+		free(tokens[i]);
+	}
+	free(tokens);
+}
 
 #pragma region printing
 void printMemoryContents() {
@@ -668,6 +845,8 @@ int main()
 		}
 		clock++;
 	}
+	printMemoryContents();
+	
 	printf("All programs have finished executing, press any key to exit\n");
 	scanf("%s");
 }
