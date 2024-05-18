@@ -607,6 +607,70 @@ int dequeNextProcess()
 	}
 }
 #pragma endregion
+char** splitString(const char* str, int* numTokens) {
+	// Copy the input string to avoid modifying the original
+	char* strCopy = strdup(str);
+	if (!strCopy) {
+		perror("strdup");
+		return NULL;
+	}
+
+	// Initial allocation for tokens
+	int tokensAllocated = 10;
+	char** tokens = malloc(tokensAllocated * sizeof(char*));
+	if (!tokens) {
+		perror("malloc");
+		free(strCopy);
+		return NULL;
+	}
+
+	int tokenCount = 0;
+	char* token = strtok(strCopy, " ");
+	while (token) {
+		if (tokenCount >= tokensAllocated) {
+			tokensAllocated *= 2;
+			char** temp = realloc(tokens, tokensAllocated * sizeof(char*));
+			if (!temp) {
+				perror("realloc");
+				for (int i = 0; i < tokenCount; i++) {
+					free(tokens[i]);
+				}
+				free(tokens);
+				free(strCopy);
+				return NULL;
+			}
+			tokens = temp;
+		}
+		tokens[tokenCount++] = strdup(token);
+		token = strtok(NULL, " ");
+	}
+
+	// Shrink the array to the actual number of tokens
+	char** result = realloc(tokens, tokenCount * sizeof(char*));
+	if (!result && tokenCount > 0) {
+		perror("realloc");
+		for (int i = 0; i < tokenCount; i++) {
+			free(tokens[i]);
+		}
+		free(tokens);
+		free(strCopy);
+		return NULL;
+	}
+
+	tokens = result;
+	*numTokens = tokenCount;
+
+	free(strCopy);
+	return tokens;
+}
+
+// Function to free the allocated memory for tokens
+void freeTokens(char** tokens, int numTokens) {
+	for (int i = 0; i < numTokens; i++) {
+		free(tokens[i]);
+	}
+	free(tokens);
+}
 
 #pragma region printing
 void printMemoryContents() {
@@ -688,7 +752,50 @@ int main()
 		//printf("Current running process: %d\n", currentProcessId);
 
 		setProgramState(currentProcessId, "running");
-		//execute()
+		char* line = getCurrentInstruction(currentProcessId);
+		int numTokens = 0;
+		char** tokens = splitString(line, &numTokens);
+		if (strcmp(tokens[0],"semWait") == 0) {
+			if (strcmp(tokens[1], "userInput") == 0) {
+				semWait(tokens[1]);
+			}
+			else if (strcmp(tokens[1], "file") == 0) {
+				semWait(tokens[1]);
+			}
+			else if (strcmp(tokens[1], "userOutput") == 0) {
+				semWait(tokens[1]);
+			}
+		}
+		else if (strcmp(tokens[0], "assign") == 0) {
+			printf("assign");
+		}
+		else if (strcmp(tokens[0], "semSignal") == 0) {
+			if (strcmp(tokens[1], "userInput") == 0) {
+				semSignal(tokens[1]);
+			}
+			else if (strcmp(tokens[1], "file") == 0) {
+				semSignal(tokens[1]);
+			}
+			else if (strcmp(tokens[1], "userOutput") == 0) {
+				semSignal(tokens[1]);
+			}
+		}
+		else if (strcmp(tokens[0], "print") == 0) {
+			printf("print");
+		}
+		else if (strcmp(tokens[0], "printFromTo") == 0) {
+			printf("printFromTo");
+		}
+		else if (strcmp(tokens[0], "writeFile") == 0) {
+			printf("writeFile");
+		}
+		
+
+		// Free the allocated memory for tokens
+		freeTokens(tokens, numTokens);
+		if (strcmp(line, "")) {
+
+		}
 		setProgramState(currentProcessId, "ready");
 		pc = incrementProgramCounter(currentProcessId);
 		updateProgramPriority(currentProcessId);
