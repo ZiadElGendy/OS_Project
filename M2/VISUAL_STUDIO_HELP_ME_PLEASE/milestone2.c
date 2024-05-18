@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 
+#pragma region definitions
 #define ANSI_COLOR_RED			"\x1b[31m"
 #define ANSI_COLOR_GREEN		"\x1b[32m"
 #define ANSI_COLOR_YELLOW		"\x1b[33m"
@@ -20,6 +21,7 @@
 #define MAX_LINE_LENGTH 64
 #define MAX_FILE_NAME 64
 #define QUEUE_CAPACITY 32
+#pragma endregion
 
 #pragma region int queue implementation
 struct Queue
@@ -87,7 +89,7 @@ int front(struct Queue* queue)
 }
 #pragma endregion
 
-
+#pragma region structs and globals
 bool inputBSemaphore = true;
 bool outputBSemaphore = true;
 bool fileBSemaphore = true;
@@ -128,6 +130,8 @@ struct memory {
     struct word words[60];
 } memory; //global variable
 
+#pragma endregion
+
 #pragma region program loading
 int setArrivalTimes()
 {
@@ -158,7 +162,7 @@ int setArrivalTimes()
 	return numPrograms;
 }
 
-char** readFile(int programNum)
+char** readInstructionFile(int programNum)
 {
     FILE* file;
     char line[MAX_LINE_LENGTH];
@@ -484,12 +488,12 @@ void setVariableValue(int processId, char variableName, char* newData)
 #pragma region program execution
 
 //print value of varx
-void print(int pid, char varX){
-    char* value = getVariableValue(pid, varX);
+void print(int pid, char varX) {
+	char* value = getVariableValue(pid, varX);
 	//char* value = "Hello world!";
-    printf("%s\n", value);
+	printf("%s\n", value);
 
-    return;
+	return;
 }
 
 //make a variable x, and assign y [ y could be input, int or string]
@@ -504,24 +508,16 @@ void assign(int pid, char varX, char* strY) {
 		setVariableValue(pid, varX, strY);
 	}
 }
-//void assign(int pid, char varX, int intY) {
-//	char str[64];
-//	sprintf(str, "% d", intY);
-//	setVariableValue(pid, varX, str);
-//}
 
+void writeFile(char* fileName, char* data) {
 
-
-
-void writeFile(char* fileName, char* data){
-    
 	// Open the file in write mode
 	FILE* file = fopen(fileName, "w");
 
 
 	// Write data to the file
 	fprintf(file, "%s", data);
-	
+
 	// Check if the file was opened successfully
 	if (file == NULL) {
 		printf("Error opening file.\n");
@@ -535,7 +531,7 @@ void writeFile(char* fileName, char* data){
 
 }
 
-char* readFile(char* fileName){
+char* readFile(char* fileName) {
 
 	// Open the file in read mode
 	FILE* file = fopen(fileName, "r");
@@ -567,11 +563,11 @@ void printFromTo(int pid, char varX, char varY) {
 	return;
 }
 
-void semWait(char* Sem){
+void semWait(char* Sem) {
 	if (strcmp(Sem, "userInput") == 0) {
 		inputBSemaphore = false;
 	}
-	else if (strcmp(Sem, "userOutput") == 0){
+	else if (strcmp(Sem, "userOutput") == 0) {
 		outputBSemaphore = false;
 	}
 	else
@@ -580,7 +576,7 @@ void semWait(char* Sem){
 	}
 }
 
-void semSignal(char* Sem){
+void semSignal(char* Sem) {
 	if (strcmp(Sem, "userInput") == 0) {
 		inputBSemaphore = true;
 	}
@@ -593,9 +589,6 @@ void semSignal(char* Sem){
 	}
 }
 
-#pragma endregion
-
-#pragma region program execution
 void queueProcess(int pid)
 {
 	int priority = getProgramPriority(pid);
@@ -643,6 +636,8 @@ int dequeNextProcess()
 	}
 }
 #pragma endregion
+
+#pragma region program parsing
 char** splitString(const char* str, int* numTokens) {
 	// Copy the input string to avoid modifying the original
 	char* strCopy = strdup(str);
@@ -707,6 +702,7 @@ void freeTokens(char** tokens, int numTokens) {
 	}
 	free(tokens);
 }
+#pragma endregion
 
 #pragma region printing
 void printMemoryContents() {
@@ -802,7 +798,7 @@ int main()
 		{
 			//Load program into memory
 			printf("%s Program %d has arrived%s \n", ANSI_BACKGROUND_GREEN, arrivalProgram, ANSI_COLOR_RESET);
-			char** lines = readFile(arrivalProgram);
+			char** lines = readInstructionFile(arrivalProgram);
 			loadProgramIntoMemory(arrivalProgram, lines);
 			queueProcess(arrivalProgram);
 
