@@ -3,13 +3,18 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_YELLOW  "\x1b[33m"
-#define ANSI_COLOR_BLUE    "\x1b[34m"
-#define ANSI_COLOR_MAGENTA "\x1b[35m"
-#define ANSI_COLOR_CYAN    "\x1b[36m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
+#define ANSI_COLOR_RED			"\x1b[31m"
+#define ANSI_COLOR_GREEN		"\x1b[32m"
+#define ANSI_COLOR_YELLOW		"\x1b[33m"
+#define ANSI_COLOR_BLUE			"\x1b[34m"
+#define ANSI_COLOR_MAGENTA		"\x1b[35m"
+#define ANSI_COLOR_CYAN			"\x1b[36m"
+#define ANSI_COLOR_BLACK		"\x1b[30m"
+#define ANSI_BACKGROUND_RED		"\x1b[41m"
+#define ANSI_BACKGROUND_GREEN	"\x1b[42m"
+#define ANSI_BACKGROUND_BLUE	"\x1b[44m"
+#define ANSI_BACKGROUND_WHITE	"\x1b[47m"
+#define ANSI_COLOR_RESET		"\x1b[0m"
 
 #define MAX_LINES 256
 #define MAX_LINE_LENGTH 64
@@ -95,6 +100,10 @@ struct Queue blockedQueue;
 struct Queue inputQueue;
 struct Queue outputQueue;
 struct Queue fileQueue;
+struct Queue arrivalQueue;
+
+int arrivalClockCycle = 0;
+int arrivalProgram = 1;
 
 struct PCB {
     int pid;
@@ -120,6 +129,35 @@ struct memory {
 } memory; //global variable
 
 #pragma region program loading
+int setArrivalTimes()
+{
+	printf("Enter the number of programs to load: \n");
+	int numPrograms;
+	int ret = scanf("%d", &numPrograms);
+	if (ret != 1)
+	{
+		perror("Invalid input");
+		return -1;
+	}
+	arrivalQueue = *createQueue(numPrograms);
+
+	printf("\nNote: The first clock cycle is 0\n");
+	for (int i = 1; i <= numPrograms; i++)
+	{
+		printf("Enter the arrival clock cycle of program %d: \n", i);
+		int ret = scanf("%d", &arrivalClockCycle);
+		if (ret != 1)
+		{
+			perror("Invalid input");
+			arrivalQueue = *createQueue(0);
+			return -1;
+		}
+		enqueue(&arrivalQueue, arrivalClockCycle);
+	}
+	arrivalClockCycle = dequeue(&arrivalQueue);
+	return numPrograms;
+}
+
 char** readFile(int programNum)
 {
     FILE* file;
@@ -128,7 +166,6 @@ char** readFile(int programNum)
     // Open the file
     char fileName[MAX_FILE_NAME];
     sprintf(fileName, "Program_%d.txt", programNum); //Concatenate the filename
-    printf("Opening file:%s\n", fileName);
     file = fopen(fileName, "r");
 
     if (file == NULL)
@@ -489,7 +526,6 @@ int dequeNextProcess()
 	}
 	else
 	{
-		printf("All queues are empty\n");
 		return -1;
 	}
 }
@@ -536,59 +572,101 @@ void printQueues() {
 	printQueue(&priority4Queue);
 	printf("\n");
 
-	printf(ANSI_COLOR_RESET "Blocked queue: ");
+	printf(ANSI_COLOR_MAGENTA "General blocked queue: ");
 	printQueue(&blockedQueue);
 	printf("\n");
+
+	printf(ANSI_COLOR_MAGENTA "Input blocked queue: ");
+	printQueue(&inputQueue);
+	printf("\n");
+
+	printf(ANSI_COLOR_MAGENTA "Output blocked queue: ");
+	printQueue(&outputQueue);
+	printf("\n");
+
+	printf(ANSI_COLOR_MAGENTA "File blocked queue: ");
+	printQueue(&fileQueue);
+	printf(ANSI_COLOR_RESET "\n");
 }
 #pragma endregion
 
 int main()
 {
+	int clock = 0;
+	bool running = true;
+	int currentProcessId;
+	int pc;
 
     priority1Queue = *createQueue(QUEUE_CAPACITY);
     priority2Queue = *createQueue(QUEUE_CAPACITY);
     priority3Queue = *createQueue(QUEUE_CAPACITY);
     priority4Queue = *createQueue(QUEUE_CAPACITY);
     blockedQueue = *createQueue(QUEUE_CAPACITY);
+	inputQueue = *createQueue(QUEUE_CAPACITY);
+	outputQueue = *createQueue(QUEUE_CAPACITY);
+	fileQueue = *createQueue(QUEUE_CAPACITY);
 
-	//Load programs into memory
-	for (int i = 1; i <= 3; i++)
-    {
-        char** lines = readFile(i);
-        loadProgramIntoMemory(i, lines);
-		queueProcess(i);
+	//Initialize arrival times
+	printf("Welcome to the MLFQ scheduler! Please note that programs should be saved as 'Program_N.txt'.\n");
+	int numPrograms = setArrivalTimes();
+	if (numPrograms == -1)
+	{
+		perror("Error setting arrival times");
+		Sleep(5000);
+		return -1;
 	}
 
-	int currentProcessId;
-	int pc;
-	//Execute programs
-	while (true)
+	//Main loop
+	while (numPrograms > 0 || running)
 	{
+		printf("\n%s%s Clock cycle: %d %s \n",ANSI_COLOR_BLACK, ANSI_BACKGROUND_WHITE, clock, ANSI_COLOR_RESET);
+		//Check if a program has arrived
+		while (clock == arrivalClockCycle)
+		{
+			//Load program into memory
+			printf("%s Program %d has arrived%s \n", ANSI_BACKGROUND_GREEN, arrivalProgram, ANSI_COLOR_RESET);
+			char** lines = readFile(arrivalProgram);
+			loadProgramIntoMemory(arrivalProgram, lines);
+			queueProcess(arrivalProgram);
+
+			arrivalClockCycle = dequeue(&arrivalQueue);
+			arrivalProgram++;
+			numPrograms--;
+		}
+
+		//Execute programs
 		currentProcessId = dequeNextProcess();
 		if (currentProcessId == -1)
 		{
-			break;
-		}
-
-		//printMemoryContents();
-		printQueues();
-		printf("Current running process: %d\n", currentProcessId);
-
-		setProgramState(currentProcessId, "running");
-		//execute()
-		setProgramState(currentProcessId, "ready");
-		pc = incrementProgramCounter(currentProcessId);
-		updateProgramPriority(currentProcessId);
-		if (pc == -1)
-		{
-			//Program has finished
-			setProgramState(currentProcessId, "terminated");
-			//TODO: Free memory
+			running = false;
+			printf("%s All queues are currently empty %s\n", ANSI_BACKGROUND_RED, ANSI_COLOR_RESET);
 		}
 		else
 		{
-			queueProcess(currentProcessId);
+			running = true;
+			int priority = getProgramPriority(currentProcessId);
+			printf("%s Currently running process: %d (Priority %d) %s\n", ANSI_BACKGROUND_BLUE, currentProcessId, priority, ANSI_COLOR_RESET);
+			//printMemoryContents();
+			printQueues();
+
+
+			setProgramState(currentProcessId, "running");
+			//execute()
+
+			setProgramState(currentProcessId, "ready");
+			pc = incrementProgramCounter(currentProcessId);
+			if (pc == -1)
+			{
+				setProgramState(currentProcessId, "terminated");
+				//TODO: Free memory
+			}
+			else
+			{
+				updateProgramPriority(currentProcessId);
+				queueProcess(currentProcessId);
+			}
 		}
+		clock++;
 	}
 	printf("All programs have finished executing, press any key to exit\n");
 	scanf("%s");
