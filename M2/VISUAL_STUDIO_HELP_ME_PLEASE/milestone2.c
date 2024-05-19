@@ -89,6 +89,75 @@ int front(struct Queue* queue)
 }
 #pragma endregion
 
+#pragma region priority queue implementation
+struct PriorityQueue
+{
+	int idx;
+	int* pqVal;
+	int* pqPriority;
+};
+
+void initPriorityQueue(struct PriorityQueue* pQueue)
+{
+	pQueue->idx = -1;
+	pQueue->pqVal = (int*)malloc(QUEUE_CAPACITY * sizeof(int));
+	pQueue->pqPriority = (int*)malloc(QUEUE_CAPACITY * sizeof(int));
+}
+
+int isPriorityQueueEmpty(struct PriorityQueue* pQueue)
+{
+	return pQueue->idx == -1;
+}
+
+int isPriorityQueueFull(struct PriorityQueue* pQueue)
+{
+	return pQueue->idx == QUEUE_CAPACITY - 1;
+}
+
+void enqueuePriorityQueue(struct PriorityQueue* pQueue, int val, int priority)
+{
+	if (isPriorityQueueFull(pQueue))
+	{
+		perror("Priority queue is full");
+		return;
+	}
+
+	pQueue->idx++;
+	pQueue->pqVal[pQueue->idx] = val;
+	pQueue->pqPriority[pQueue->idx] = priority;
+}
+
+int dequeuePriorityQueue(struct PriorityQueue* pQueue)
+{
+	if (isPriorityQueueEmpty(pQueue))
+	{
+		perror("Priority queue is empty");
+		return -1;
+	}
+
+	int minPriority = pQueue->pqPriority[0];
+	int minIdx = 0;
+	for (int i = 1; i <= pQueue->idx; i++)
+	{
+		if (pQueue->pqPriority[i] < minPriority)
+		{
+			minPriority = pQueue->pqPriority[i];
+			minIdx = i;
+		}
+	}
+
+	int minVal = pQueue->pqVal[minIdx];
+	for (int i = minIdx; i < pQueue->idx; i++)
+	{
+		pQueue->pqVal[i] = pQueue->pqVal[i + 1];
+		pQueue->pqPriority[i] = pQueue->pqPriority[i + 1];
+	}
+	pQueue->idx--;
+
+	return minVal;
+}
+#pragma endregion
+
 #pragma region structs and globals
 bool inputBSemaphore = true;
 bool outputBSemaphore = true;
@@ -99,9 +168,9 @@ struct Queue priority2Queue;
 struct Queue priority3Queue;
 struct Queue priority4Queue;
 struct Queue blockedQueue;
-struct Queue inputQueue;
-struct Queue outputQueue;
-struct Queue fileQueue;
+struct PriorityQueue inputQueue;
+struct PriorityQueue outputQueue;
+struct PriorityQueue fileQueue;
 struct Queue arrivalQueue;
 
 int arrivalClockCycle = 0;
@@ -140,7 +209,7 @@ int setArrivalTimes()
 	int ret = scanf("%d", &numPrograms);
 	if (ret != 1)
 	{
-		perror("Invalid input");
+		printf(ANSI_BACKGROUND_RED"Error: Invalid input\n"ANSI_COLOR_RESET);
 		return -1;
 	}
 	arrivalQueue = *createQueue(numPrograms);
@@ -149,10 +218,17 @@ int setArrivalTimes()
 	for (int i = 1; i <= numPrograms; i++)
 	{
 		printf("Enter the arrival clock cycle of program %d: \n", i);
+		int prevArrivalClockCycle = arrivalClockCycle;
 		int ret = scanf("%d", &arrivalClockCycle);
 		if (ret != 1)
 		{
-			perror("Invalid input");
+			printf(ANSI_BACKGROUND_RED"Error: Invalid input\n"ANSI_COLOR_RESET);
+			arrivalQueue = *createQueue(0);
+			return -1;
+		}
+		if (arrivalClockCycle < prevArrivalClockCycle)
+		{
+			printf(ANSI_BACKGROUND_RED"Error: Arrival clock cycle must be greater than the previous arrival clock cycle.\nConsider renaming files to match the desired order.\n"ANSI_COLOR_RESET);
 			arrivalQueue = *createQueue(0);
 			return -1;
 		}
@@ -728,6 +804,23 @@ void printQueue(struct Queue* queue) {
 	}
 }
 
+void printPriorityQueue(struct PriorityQueue* pQueue)
+{
+	struct PriorityQueue tempQueue;
+	initPriorityQueue(&tempQueue); 
+
+	for (int i = 0; i <= pQueue->idx; i++)
+	{
+		enqueuePriorityQueue(&tempQueue, pQueue->pqVal[i], pQueue->pqPriority[i]);
+	}
+
+	while (!isPriorityQueueEmpty(&tempQueue))
+	{
+		int val = dequeuePriorityQueue(&tempQueue);
+		printf("%d ", val);
+	}
+}
+
 void printQueues() {
 	printf(ANSI_COLOR_RED "Priority 1 queue: ");
 	printQueue(&priority1Queue);
@@ -750,15 +843,15 @@ void printQueues() {
 	printf("\n");
 
 	printf(ANSI_COLOR_MAGENTA "Input blocked queue: ");
-	printQueue(&inputQueue);
+	printPriorityQueue(&inputQueue);
 	printf("\n");
 
 	printf(ANSI_COLOR_MAGENTA "Output blocked queue: ");
-	printQueue(&outputQueue);
+	printPriorityQueue(&outputQueue);
 	printf("\n");
 
 	printf(ANSI_COLOR_MAGENTA "File blocked queue: ");
-	printQueue(&fileQueue);
+	printPriorityQueue(&fileQueue);
 	printf(ANSI_COLOR_RESET "\n");
 }
 #pragma endregion
@@ -775,17 +868,17 @@ int main()
     priority3Queue = *createQueue(QUEUE_CAPACITY);
     priority4Queue = *createQueue(QUEUE_CAPACITY);
     blockedQueue = *createQueue(QUEUE_CAPACITY);
-	inputQueue = *createQueue(QUEUE_CAPACITY);
-	outputQueue = *createQueue(QUEUE_CAPACITY);
-	fileQueue = *createQueue(QUEUE_CAPACITY);
+	initPriorityQueue(&inputQueue);
+	initPriorityQueue(&outputQueue);
+	initPriorityQueue(&fileQueue);
 
 	//Initialize arrival times
 	printf("Welcome to the MLFQ scheduler! Please note that programs should be saved as 'Program_N.txt'.\n");
 	int numPrograms = setArrivalTimes();
 	if (numPrograms == -1)
 	{
-		perror("Error setting arrival times");
-		Sleep(5000);
+		printf(ANSI_COLOR_RED"Error setting arrival times, program could not start.");
+		Sleep(10000);
 		return -1;
 	}
 
@@ -842,7 +935,6 @@ int main()
 		clock++;
 	}
 	printMemoryContents();
-	
 	printf("All programs have finished executing, press any key to exit\n");
-	scanf("%s");
+	scanf("%d");
 }
