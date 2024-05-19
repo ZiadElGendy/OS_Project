@@ -3,18 +3,25 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_YELLOW  "\x1b[33m"
-#define ANSI_COLOR_BLUE    "\x1b[34m"
-#define ANSI_COLOR_MAGENTA "\x1b[35m"
-#define ANSI_COLOR_CYAN    "\x1b[36m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
+#pragma region definitions
+#define ANSI_COLOR_RED			"\x1b[31m"
+#define ANSI_COLOR_GREEN		"\x1b[32m"
+#define ANSI_COLOR_YELLOW		"\x1b[33m"
+#define ANSI_COLOR_BLUE			"\x1b[34m"
+#define ANSI_COLOR_MAGENTA		"\x1b[35m"
+#define ANSI_COLOR_CYAN			"\x1b[36m"
+#define ANSI_COLOR_BLACK		"\x1b[30m"
+#define ANSI_BACKGROUND_RED		"\x1b[41m"
+#define ANSI_BACKGROUND_GREEN	"\x1b[42m"
+#define ANSI_BACKGROUND_BLUE	"\x1b[44m"
+#define ANSI_BACKGROUND_WHITE	"\x1b[47m"
+#define ANSI_COLOR_RESET		"\x1b[0m"
 
 #define MAX_LINES 256
 #define MAX_LINE_LENGTH 64
 #define MAX_FILE_NAME 64
 #define QUEUE_CAPACITY 32
+#pragma endregion
 
 #pragma region int queue implementation
 struct Queue
@@ -82,7 +89,76 @@ int front(struct Queue* queue)
 }
 #pragma endregion
 
+#pragma region priority queue implementation
+struct PriorityQueue
+{
+	int idx;
+	int* pqVal;
+	int* pqPriority;
+};
 
+void initPriorityQueue(struct PriorityQueue* pQueue)
+{
+	pQueue->idx = -1;
+	pQueue->pqVal = (int*)malloc(QUEUE_CAPACITY * sizeof(int));
+	pQueue->pqPriority = (int*)malloc(QUEUE_CAPACITY * sizeof(int));
+}
+
+int isPriorityQueueEmpty(struct PriorityQueue* pQueue)
+{
+	return pQueue->idx == -1;
+}
+
+int isPriorityQueueFull(struct PriorityQueue* pQueue)
+{
+	return pQueue->idx == QUEUE_CAPACITY - 1;
+}
+
+void enqueuePriorityQueue(struct PriorityQueue* pQueue, int val, int priority)
+{
+	if (isPriorityQueueFull(pQueue))
+	{
+		perror("Priority queue is full");
+		return;
+	}
+
+	pQueue->idx++;
+	pQueue->pqVal[pQueue->idx] = val;
+	pQueue->pqPriority[pQueue->idx] = priority;
+}
+
+int dequeuePriorityQueue(struct PriorityQueue* pQueue)
+{
+	if (isPriorityQueueEmpty(pQueue))
+	{
+		perror("Priority queue is empty");
+		return -1;
+	}
+
+	int minPriority = pQueue->pqPriority[0];
+	int minIdx = 0;
+	for (int i = 1; i <= pQueue->idx; i++)
+	{
+		if (pQueue->pqPriority[i] < minPriority)
+		{
+			minPriority = pQueue->pqPriority[i];
+			minIdx = i;
+		}
+	}
+
+	int minVal = pQueue->pqVal[minIdx];
+	for (int i = minIdx; i < pQueue->idx; i++)
+	{
+		pQueue->pqVal[i] = pQueue->pqVal[i + 1];
+		pQueue->pqPriority[i] = pQueue->pqPriority[i + 1];
+	}
+	pQueue->idx--;
+
+	return minVal;
+}
+#pragma endregion
+
+#pragma region structs and globals
 bool inputBSemaphore = true;
 bool outputBSemaphore = true;
 bool fileBSemaphore = true;
@@ -92,9 +168,13 @@ struct Queue priority2Queue;
 struct Queue priority3Queue;
 struct Queue priority4Queue;
 struct Queue blockedQueue;
-struct Queue inputQueue;
-struct Queue outputQueue;
-struct Queue fileQueue;
+struct PriorityQueue inputQueue;
+struct PriorityQueue outputQueue;
+struct PriorityQueue fileQueue;
+struct Queue arrivalQueue;
+
+int arrivalClockCycle = 0;
+int arrivalProgram = 1;
 
 struct PCB {
     int pid;
@@ -119,7 +199,45 @@ struct memory {
     struct word words[60];
 } memory; //global variable
 
+#pragma endregion
+
 #pragma region program loading
+int setArrivalTimes()
+{
+	printf("Enter the number of programs to load: \n");
+	int numPrograms;
+	int ret = scanf("%d", &numPrograms);
+	if (ret != 1)
+	{
+		printf(ANSI_BACKGROUND_RED"Error: Invalid input\n"ANSI_COLOR_RESET);
+		return -1;
+	}
+	arrivalQueue = *createQueue(numPrograms);
+
+	printf("\nNote: The first clock cycle is 0\n");
+	for (int i = 1; i <= numPrograms; i++)
+	{
+		printf("Enter the arrival clock cycle of program %d: \n", i);
+		int prevArrivalClockCycle = arrivalClockCycle;
+		int ret = scanf("%d", &arrivalClockCycle);
+		if (ret != 1)
+		{
+			printf(ANSI_BACKGROUND_RED"Error: Invalid input\n"ANSI_COLOR_RESET);
+			arrivalQueue = *createQueue(0);
+			return -1;
+		}
+		if (arrivalClockCycle < prevArrivalClockCycle)
+		{
+			printf(ANSI_BACKGROUND_RED"Error: Arrival clock cycle must be greater than the previous arrival clock cycle.\nConsider renaming files to match the desired order.\n"ANSI_COLOR_RESET);
+			arrivalQueue = *createQueue(0);
+			return -1;
+		}
+		enqueue(&arrivalQueue, arrivalClockCycle);
+	}
+	arrivalClockCycle = dequeue(&arrivalQueue);
+	return numPrograms;
+}
+
 char** readInstructionFile(int programNum)
 {
     FILE* file;
@@ -128,7 +246,6 @@ char** readInstructionFile(int programNum)
     // Open the file
     char fileName[MAX_FILE_NAME];
     sprintf(fileName, "Program_%d.txt", programNum); //Concatenate the filename
-    printf("Opening file:%s\n", fileName);
     file = fopen(fileName, "r");
 
     if (file == NULL)
@@ -447,12 +564,12 @@ void setVariableValue(int processId, char variableName, char* newData)
 #pragma region program execution
 
 //print value of varx
-void print(int pid, char varX){
-    char* value = getVariableValue(pid, varX);
+void print(int pid, char varX) {
+	char* value = getVariableValue(pid, varX);
 	//char* value = "Hello world!";
-    printf("%s\n", value);
+	printf("%s\n", value);
 
-    return;
+	return;
 }
 
 //make a variable x, and assign y [ y could be input, int or string]
@@ -467,24 +584,16 @@ void assign(int pid, char varX, char* strY) {
 		setVariableValue(pid, varX, strY);
 	}
 }
-//void assign(int pid, char varX, int intY) {
-//	char str[64];
-//	sprintf(str, "% d", intY);
-//	setVariableValue(pid, varX, str);
-//}
 
+void writeFile(char* fileName, char* data) {
 
-
-
-void writeFile(char* fileName, char* data){
-    
 	// Open the file in write mode
 	FILE* file = fopen(fileName, "w");
 
 
 	// Write data to the file
 	fprintf(file, "%s", data);
-	
+
 	// Check if the file was opened successfully
 	if (file == NULL) {
 		printf("Error opening file.\n");
@@ -498,7 +607,7 @@ void writeFile(char* fileName, char* data){
 
 }
 
-char* readFile(char* fileName){
+char* readFile(char* fileName) {
 
 	// Open the file in read mode
 	FILE* file = fopen(fileName, "r");
@@ -530,11 +639,11 @@ void printFromTo(int pid, char varX, char varY) {
 	return;
 }
 
-void semWait(char* Sem){
+void semWait(char* Sem) {
 	if (strcmp(Sem, "userInput") == 0) {
 		inputBSemaphore = false;
 	}
-	else if (strcmp(Sem, "userOutput") == 0){
+	else if (strcmp(Sem, "userOutput") == 0) {
 		outputBSemaphore = false;
 	}
 	else
@@ -543,7 +652,7 @@ void semWait(char* Sem){
 	}
 }
 
-void semSignal(char* Sem){
+void semSignal(char* Sem) {
 	if (strcmp(Sem, "userInput") == 0) {
 		inputBSemaphore = true;
 	}
@@ -556,9 +665,6 @@ void semSignal(char* Sem){
 	}
 }
 
-#pragma endregion
-
-#pragma region program execution
 void queueProcess(int pid)
 {
 	int priority = getProgramPriority(pid);
@@ -602,11 +708,12 @@ int dequeNextProcess()
 	}
 	else
 	{
-		printf("All queues are empty\n");
 		return -1;
 	}
 }
 #pragma endregion
+
+#pragma region program parsing
 char** splitString(const char* str, int* numTokens) {
 	// Copy the input string to avoid modifying the original
 	char* strCopy = strdup(str);
@@ -671,6 +778,7 @@ void freeTokens(char** tokens, int numTokens) {
 	}
 	free(tokens);
 }
+#pragma endregion
 
 #pragma region printing
 void printMemoryContents() {
@@ -696,6 +804,23 @@ void printQueue(struct Queue* queue) {
 	}
 }
 
+void printPriorityQueue(struct PriorityQueue* pQueue)
+{
+	struct PriorityQueue tempQueue;
+	initPriorityQueue(&tempQueue); 
+
+	for (int i = 0; i <= pQueue->idx; i++)
+	{
+		enqueuePriorityQueue(&tempQueue, pQueue->pqVal[i], pQueue->pqPriority[i]);
+	}
+
+	while (!isPriorityQueueEmpty(&tempQueue))
+	{
+		int val = dequeuePriorityQueue(&tempQueue);
+		printf("%d ", val);
+	}
+}
+
 void printQueues() {
 	printf(ANSI_COLOR_RED "Priority 1 queue: ");
 	printQueue(&priority1Queue);
@@ -713,43 +838,83 @@ void printQueues() {
 	printQueue(&priority4Queue);
 	printf("\n");
 
-	printf(ANSI_COLOR_RESET "Blocked queue: ");
+	printf(ANSI_COLOR_MAGENTA "General blocked queue: ");
 	printQueue(&blockedQueue);
 	printf("\n");
+
+	printf(ANSI_COLOR_MAGENTA "Input blocked queue: ");
+	printPriorityQueue(&inputQueue);
+	printf("\n");
+
+	printf(ANSI_COLOR_MAGENTA "Output blocked queue: ");
+	printPriorityQueue(&outputQueue);
+	printf("\n");
+
+	printf(ANSI_COLOR_MAGENTA "File blocked queue: ");
+	printPriorityQueue(&fileQueue);
+	printf(ANSI_COLOR_RESET "\n");
 }
 #pragma endregion
 
 int main()
 {
+	int clock = 0;
+	bool running = true;
+	int currentProcessId;
+	int pc;
 
     priority1Queue = *createQueue(QUEUE_CAPACITY);
     priority2Queue = *createQueue(QUEUE_CAPACITY);
     priority3Queue = *createQueue(QUEUE_CAPACITY);
     priority4Queue = *createQueue(QUEUE_CAPACITY);
     blockedQueue = *createQueue(QUEUE_CAPACITY);
+	initPriorityQueue(&inputQueue);
+	initPriorityQueue(&outputQueue);
+	initPriorityQueue(&fileQueue);
 
-	//Load programs into memory
-	for (int i = 1; i <= 3; i++)
-    {
-        char** lines = readInstructionFile(i);
-        loadProgramIntoMemory(i, lines);
-		queueProcess(i);
+	//Initialize arrival times
+	printf("Welcome to the MLFQ scheduler! Please note that programs should be saved as 'Program_N.txt'.\n");
+	int numPrograms = setArrivalTimes();
+	if (numPrograms == -1)
+	{
+		printf(ANSI_COLOR_RED"Error setting arrival times, program could not start.");
+		Sleep(10000);
+		return -1;
 	}
 
-	int currentProcessId;
-	int pc;
-	//Execute programs
-	while (true)
+	//Main loop
+	while (numPrograms > 0 || running)
 	{
+		printf("\n%s%s Clock cycle: %d %s \n",ANSI_COLOR_BLACK, ANSI_BACKGROUND_WHITE, clock, ANSI_COLOR_RESET);
+		//Check if a program has arrived
+		while (clock == arrivalClockCycle)
+		{
+			//Load program into memory
+			printf("%s Program %d has arrived%s \n", ANSI_BACKGROUND_GREEN, arrivalProgram, ANSI_COLOR_RESET);
+			char** lines = readInstructionFile(arrivalProgram);
+			loadProgramIntoMemory(arrivalProgram, lines);
+			queueProcess(arrivalProgram);
+
+			arrivalClockCycle = dequeue(&arrivalQueue);
+			arrivalProgram++;
+			numPrograms--;
+		}
+
+		//Execute programs
 		currentProcessId = dequeNextProcess();
 		if (currentProcessId == -1)
 		{
-			break;
+			running = false;
+			printf("%s All queues are currently empty %s\n", ANSI_BACKGROUND_RED, ANSI_COLOR_RESET);
 		}
+		else
+		{
+			running = true;
+			int priority = getProgramPriority(currentProcessId);
+			printf("%s Currently running process: %d (Priority %d) %s\n", ANSI_BACKGROUND_BLUE, currentProcessId, priority, ANSI_COLOR_RESET);
+			//printMemoryContents();
+			printQueues();
 
-		//printMemoryContents();
-		//printQueues();
-		//printf("Current running process: %d\n", currentProcessId);
 
 		setProgramState(currentProcessId, "running");
 		char* line = getCurrentInstruction(currentProcessId);
@@ -802,23 +967,22 @@ int main()
 		freeTokens(tokens, numTokens);
 		if (strcmp(line, "")) {
 
+			setProgramState(currentProcessId, "ready");
+			pc = incrementProgramCounter(currentProcessId);
+			if (pc == -1)
+			{
+				setProgramState(currentProcessId, "terminated");
+				//TODO: Free memory
+			}
+			else
+			{
+				updateProgramPriority(currentProcessId);
+				queueProcess(currentProcessId);
+			}
 		}
-		setProgramState(currentProcessId, "ready");
-		pc = incrementProgramCounter(currentProcessId);
-		updateProgramPriority(currentProcessId);
-		if (pc == -1)
-		{
-			//Program has finished
-			setProgramState(currentProcessId, "terminated");
-			//TODO: Free memory
-		}
-		else
-		{
-			queueProcess(currentProcessId);
-		}
+		clock++;
 	}
 	printMemoryContents();
-	
 	printf("All programs have finished executing, press any key to exit\n");
-	scanf("%s");
+	scanf("%d");
 }
