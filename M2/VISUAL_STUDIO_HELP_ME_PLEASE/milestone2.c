@@ -778,11 +778,12 @@ char* readFile(int pid, char var) {
 	// Read and print the contents of the file
 	char buffer[1000]; // Assuming a maximum line length of 1000 characters
 	while (fgets(buffer, sizeof(buffer), file) != NULL) {
-		printf("%s\n", buffer);
+		//printf("%s\n", buffer);
 	}
 
 	// Close the file
 	fclose(file);
+	return buffer;
 }
 
 //print all numbers between x and y
@@ -1135,7 +1136,7 @@ int main()
 			printMemoryContents();
 
 			setProgramState(currentProcessId, "running");
-			int executed = executeInstruction(currentProcessId);
+			//execute()
 
 			if (executed == 0)
 			{
