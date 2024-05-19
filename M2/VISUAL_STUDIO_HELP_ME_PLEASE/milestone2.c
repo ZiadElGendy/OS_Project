@@ -767,7 +767,14 @@ int main()
 			}
 		}
 		else if (strcmp(tokens[0], "assign") == 0) {
-			printf("assign");
+			if (numTokens == 4) {
+				if (tokens[2] == "readFile") {
+					//do readfile stuff here
+				}
+			}
+			else {
+				assign(currentProcessId, tokens[1], tokens[2]);
+			}
 		}
 		else if (strcmp(tokens[0], "semSignal") == 0) {
 			if (strcmp(tokens[1], "userInput") == 0) {
@@ -781,10 +788,10 @@ int main()
 			}
 		}
 		else if (strcmp(tokens[0], "print") == 0) {
-			printf("print");
+			print(currentProcessId, tokens[1]);
 		}
 		else if (strcmp(tokens[0], "printFromTo") == 0) {
-			printf("printFromTo");
+			printFromTo(currentProcessId, tokens[1], tokens[2]);
 		}
 		else if (strcmp(tokens[0], "writeFile") == 0) {
 			printf("writeFile");
