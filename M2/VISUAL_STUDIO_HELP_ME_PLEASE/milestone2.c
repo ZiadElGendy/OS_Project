@@ -195,20 +195,6 @@ struct Queue arrivalQueue;
 int arrivalClockCycle = 0;
 int arrivalProgram = 1;
 
-struct PCB {
-    int pid;
-    char processState;
-    int currentPriority;
-    int programCounter;
-    int lowerMemoryBound;
-    int higherMemoryBound;
-};
-
-struct Process {
-    struct PCB pcb;
-    int quantum;
-};
-
 struct word {
     char name[16];
     char data[64];
