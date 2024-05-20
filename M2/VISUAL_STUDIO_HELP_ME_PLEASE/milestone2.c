@@ -741,20 +741,22 @@ void assign(int pid, char varX, char* strY) {
 	}
 }
 
-void writeFile(char* fileName, char* data) {
+void writeFile(int pid, char varA, char varB) {
+	char* fileName = getVariableValue(pid, varA);
+	char* data = getVariableValue(pid, varB);
 
 	// Open the file in write mode
 	FILE* file = fopen(fileName, "w");
-
-
-	// Write data to the file
-	fprintf(file, "%s", data);
 
 	// Check if the file was opened successfully
 	if (file == NULL) {
 		printf("Error opening file.\n");
 		return;
 	}
+
+	// Write data to the file
+	fprintf(file, "%s", data);
+
 
 	// Close the file
 	fclose(file);
@@ -938,7 +940,7 @@ int executeInstruction(int processId)
 		}
 		else
 		{
-			writeFile(tokens[1], tokens[2]);
+			writeFile(processId, tokens[1][0], tokens[2][0]);
 			return 0;
 		}
 	}
