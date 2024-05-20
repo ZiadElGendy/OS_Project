@@ -1119,6 +1119,8 @@ int main()
 		}
 
 		//Execute programs
+		printQueues();
+		printMemoryContents();
 		currentProcessId = dequeNextProcess();
 		if (currentProcessId == -1)
 		{
@@ -1131,9 +1133,6 @@ int main()
 			int priority = getProgramPriority(currentProcessId);
 			printf("%s Currently running process: %d (Priority %d) %s\n", ANSI_BACKGROUND_BLUE, currentProcessId, priority, ANSI_COLOR_RESET);
 			printf("%s Current instruction: %s%s\n",ANSI_COLOR_BLUE, getCurrentInstruction(currentProcessId), ANSI_COLOR_RESET);
-
-			printQueues();
-			printMemoryContents();
 
 			setProgramState(currentProcessId, "running");
 			int executed = executeInstruction(currentProcessId);
