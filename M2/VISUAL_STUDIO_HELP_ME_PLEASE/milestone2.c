@@ -1089,9 +1089,6 @@ int main()
 	//Main loop
 	while (numPrograms > 0 || running)
 	{
-		if (clock == 14)
-			printf("");
-
 		printf("\n%s%s Clock cycle: %d %s \n",ANSI_COLOR_BLACK, ANSI_BACKGROUND_WHITE, clock, ANSI_COLOR_RESET);
 		//Check if a program has arrived
 		while (clock == arrivalClockCycle)
@@ -1120,7 +1117,7 @@ int main()
 		{
 			running = true;
 			int priority = getProgramPriority(currentProcessId);
-			printf("%s Currently running process: %d (Priority %d) %s\n", ANSI_BACKGROUND_BLUE, currentProcessId, priority, ANSI_COLOR_RESET);
+			printf("%s Currently running process: %d%s\n", ANSI_BACKGROUND_BLUE, currentProcessId, ANSI_COLOR_RESET);
 			printf("%s Current instruction: %s%s\n",ANSI_COLOR_BLUE, getCurrentInstruction(currentProcessId), ANSI_COLOR_RESET);
 
 			setProgramState(currentProcessId, "running");
