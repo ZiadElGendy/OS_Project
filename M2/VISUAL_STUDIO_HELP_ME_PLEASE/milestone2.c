@@ -775,15 +775,16 @@ char* readFile(int pid, char var) {
 		return "\0";
 	}
 
-	// Read and print the contents of the file
 	char buffer[64];
 	while (fgets(buffer, sizeof(buffer), file) != NULL) {
-		//printf("%s\n", buffer);
+		
 	}
+
+	char* bufferTrim = strdup(buffer);
 
 	// Close the file
 	fclose(file);
-	return buffer;
+	return bufferTrim;
 }
 
 //print all numbers between x and y
@@ -1119,8 +1120,8 @@ int main()
 		}
 
 		//Execute programs
-		printQueues();
 		printMemoryContents();
+		printQueues();
 		currentProcessId = dequeNextProcess();
 		if (currentProcessId == -1)
 		{
