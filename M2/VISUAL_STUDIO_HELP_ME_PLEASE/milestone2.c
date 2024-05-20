@@ -511,11 +511,11 @@ void updateProgramPriority(int processId)
 	{
 		newPriority = '1'; // Removed the dereference operator *
 	}
-	else if (quantum < 2)
+	else if (quantum < 3)
 	{
 		newPriority = '2';
 	}
-	else if (quantum < 4)
+	else if (quantum < 7)
 	{
 		newPriority = '3';
 	}
